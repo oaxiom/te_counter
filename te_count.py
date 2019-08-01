@@ -42,7 +42,6 @@ class measureTE:
 
         final_results = {i: 0 for i in self.all_feature_names}
 
-        done = 0
         bucket_size = glbase3.config.bucket_size
 
         sam = pysam.AlignmentFile(filename, 'r')
@@ -71,22 +70,25 @@ class measureTE:
 
                 for index in loc_ids:
                     #print loc.qcollide(self.linearData[index]["loc"]), loc, self.linearData[index]["loc"]
-                    if loc.qcollide(self.genome.linearData[index]["loc"]):
+                    if loc.qcollide(self.genome.linearData[index]["loc"]): # Any 1 bp overlap...
                         result.append(self.genome.linearData[index])
 
                 if result:
-                    for r in result:
-                        #print(r)
-                        final_results[r['ensg']] += 1
-
-            done += 1
-
-            if done % 1000000 == 0:
-                log.info('Processed {:,} reads'.format(done))
+                    # do the annotation so that a read only gets counted to a TE if it does not hit a gene:
+                    types = set([i['type'] for i in result])
+                    if 'protein_coding' in types or 'lincRNA' in types:
+                        for r in result:
+                            if r['type'] == 'lincRNA' or r['type'] == 'protein_coding':
+                                final_results[r['ensg']] += 1
+                    elif 'TE' in types:
+                        for r in result: # Not in any other mRNA, so okay to count as a TE
+                            final_results[r['ensg']] += 1
+            if idx % 100 == 0:
+                log.info('Processed {:,} reads'.format(idx))
                 #break
 
         sam.close()
-        log.info('Processed {:,} reads'.format(done))
+        log.info('Processed {:,} reads'.format(idx))
 
         return final_results
 
