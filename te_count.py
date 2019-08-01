@@ -171,6 +171,8 @@ def main():
     log.info('Finding Genome')
     species = args.genome[0]
     if not common.check_species(species):
+        log.error('{0} genome not found'.format(species))
+        common.print_species(log=log)
         sys.exit()
 
     mte = measureTE(sys.argv[0])
