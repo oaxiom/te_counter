@@ -80,7 +80,7 @@ class measureTE:
 
             if done % 1000000 == 0:
                 log.info('Processed {:,} reads'.format(done))
-                break
+                #break
 
         sam.close()
         log.info('Processed {:,} reads'.format(done))
