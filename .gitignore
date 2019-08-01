@@ -1,3 +1,7 @@
 .DS_Store
 *.pyc
 __pycache__
+*.glb
+*.gz
+*.tsv
+*.clean
