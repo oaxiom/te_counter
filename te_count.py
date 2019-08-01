@@ -48,23 +48,26 @@ class measureTE:
         sam = pysam.AlignmentFile(filename, 'r')
 
         for idx, read in enumerate(sam):
-            chrom = read.reference_name
+            chrom = read.reference_name.replace('chr', '')
             left = read.reference_start
             rite = read.reference_end
 
+            if chrom not in self.genome.buckets: # Must be a valid chromosome
+                continue
+
             # reach into the genelist guts...
             # work out which of the buckets is required:
-            loc = glbase3.location(chr=chrom, left=left, right=rite)
-            left_buck = ((loc["left"]-1)//bucket_size) * bucket_size
-            right_buck = ((loc["right"])//bucket_size) * bucket_size
+            left_buck = ((left-1)//bucket_size) * bucket_size
+            right_buck = (rite//bucket_size) * bucket_size
             buckets_reqd = list(range(left_buck, right_buck+bucket_size, bucket_size))
             result = []
             # get the ids reqd.
             loc_ids = set()
             if buckets_reqd:
+                loc = glbase3.location(chr=chrom, left=left, right=rite)
                 for buck in buckets_reqd:
-                    if buck in self.genome.buckets[loc["chr"]]:
-                        loc_ids.update(self.genome.buckets[loc["chr"]][buck]) # set = unique ids
+                    if buck in self.genome.buckets[chrom]:
+                        loc_ids.update(self.genome.buckets[chrom][buck]) # set = unique ids
 
                 for index in loc_ids:
                     #print loc.qcollide(self.linearData[index]["loc"]), loc, self.linearData[index]["loc"]
