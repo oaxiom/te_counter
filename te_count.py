@@ -6,7 +6,7 @@ A very simple counter for
 
 '''
 
-import sys, os
+import sys, os, argparse, logging
 import glbase3 # glbase3 namespace mangling!
 import pysam
 import common
@@ -25,34 +25,37 @@ class measureTE:
         '''
         self.base_path = base_path
 
-    def bind_genome(self, genelist_glb_filename, logger=None):
+    def bind_genome(self, genelist_glb_filename):
         self.genome = glbase3.glload(genelist_glb_filename)
-        logger('Loaded %s' % genelist_glb_filename)
+        self.all_feature_names = sorted(list(set(self.genome['ensg'])))
+        print(self.all_feature_names)
 
-    def parse_bampe(self, filename, out_filename, logger=None):
+    def parse_bampe(self, filename, log=None):
         '''
         **Purpose**
-            Load in a BAMPE file, ideally output by collect_valid_pairs.py, although I guess any valid BEDPE will do
+            Load in a BAMPE file
 
         **Arguments**
             filename (Required)
-                filename of the BEDPE file
+                filename of the BAMPE file
         '''
         assert filename, 'You must specify a filename'
+
+        final_results = {i: 0 for i in self.all_feature_names}
 
         done = 0
         bucket_size = glbase3.config.bucket_size
 
-        output = []
+        sam = pysam.AlignmentFile(filename, 'r')
 
-        read = pysam.AlignmentFile(filename, 'r')
-
-        for idx, line in enumerate(read):
-            line = line.strip().split('\t')
+        for idx, read in enumerate(sam):
+            chrom = read.reference_name
+            left = read.reference_start
+            rite = read.reference_end
 
             # reach into the genelist guts...
             # work out which of the buckets is required:
-            loc = glbase3.location(chr=line[0], left=line[1], right=line[2])
+            loc = glbase3.location(chr=chrom, left=left, right=rite)
             left_buck = ((loc["left"]-1)//bucket_size) * bucket_size
             right_buck = ((loc["right"])//bucket_size) * bucket_size
             buckets_reqd = list(range(left_buck, right_buck+bucket_size, bucket_size))
@@ -69,74 +72,26 @@ class measureTE:
                     if loc.qcollide(self.genome.linearData[index]["loc"]):
                         result.append(self.genome.linearData[index])
 
-                read1_feat = []
-                read1_type = []
                 if result:
                     for r in result:
-                        read1_feat.append(r['name'])
-                        read1_type.append(r['type'])
-
-            # work out which of the buckets is required:
-            loc = glbase3.location(chr=line[3], left=line[4], right=line[5])
-            left_buck = ((loc["left"]-1)//bucket_size) * bucket_size
-            right_buck = ((loc["right"])//bucket_size) * bucket_size
-            buckets_reqd = list(range(left_buck, right_buck+bucket_size, bucket_size))
-            result = []
-            # get the ids reqd.
-            loc_ids = set()
-            if buckets_reqd:
-                for buck in buckets_reqd:
-                    if buck in self.genome.buckets[loc["chr"]]:
-                        loc_ids.update(self.genome.buckets[loc["chr"]][buck]) # set = unique ids
-
-                for index in loc_ids:
-                    #print loc.qcollide(self.linearData[index]["loc"]), loc, self.linearData[index]["loc"]
-                    if loc.qcollide(self.genome.linearData[index]["loc"]):
-                        result.append(self.genome.linearData[index])
-
-                read2_feat = []
-                read2_type = []
-                if result:
-                    for r in result:
-                        read2_feat.append(r['name'])
-                        read2_type.append(r['type'])
-
-            if read1_feat:
-                read1_feat = ', '.join(set(read1_feat))
-                read1_type = ', '.join(set(read1_type))
-            else:
-                read1_feat = 'None'
-                read1_type = 'None'
-
-            if read2_feat:
-                read2_feat = ', '.join(set(read2_feat))
-                read2_type = ', '.join(set(read2_type))
-            else:
-                read2_feat = 'None'
-                read2_type = 'None'
-
-            output.append('\t'.join(line[0:3] + [read1_feat, read1_type] + line[3:] + [read2_feat, read2_type]))
-
-            #print(output[-1])
+                        #print(r)
+                        final_results[r['ensg']] += 1
 
             done += 1
 
-            if done % 10 == 0:
-                logger('Processed: {:,}'.format(done))
+            if done % 1000000 == 0:
+                log.info('Processed {:,} reads'.format(done))
                 break
 
-        logger('Processed {:,} reads'.format(len(output)))
-        oh.close()
+        sam.close()
+        log.info('Processed {:,} reads'.format(done))
 
-        out = open(out_filename, 'w')
-        for o in output:
-            out.write('%s\n' % o)
-        out.close()
+        return final_results
 
-    def parse_bamse(self, filename, out_filename, expand_bed=0, logger=None):
+    def parse_bamse(self, filename, logger=None):
         '''
         **Purpose**
-            Load in a BED file, ideally output by collect_valid_pairs.py,
+            Load in a BAM SE file, ideally output by collect_valid_pairs.py,
             although I guess any valid BED will do
 
             This function is not officially part of te_hic, but could be useful to annotate
@@ -152,65 +107,24 @@ class measureTE:
         '''
         assert filename, 'You must specify a filename'
 
-        done = 0
-        bucket_size = glbase3.config.bucket_size
+        pass
 
-        output = []
+    def save_result(self, result, out_filename, log=None):
+        '''
+        **Purpose**
+            Save the data to a TSV file
 
-        oh = open(filename, 'r')
-        for idx, line in enumerate(oh):
-            line = line.strip().split('\t')
+        **Arguments**
+            out_filename (Required)
+                the filename to save the data to
+        '''
+        assert out_filename, 'You must specify a filename'
 
-            # reach into the genelist guts...
-            # work out which of the buckets is required:
-            loc = glbase3.location(chr=line[0], left=int(line[1])-expand_bed, right=int(line[2])+expand_bed)
-            left_buck = int((loc["left"]-1)/bucket_size) * bucket_size
-            right_buck = int((loc["right"])/bucket_size) * bucket_size
-            buckets_reqd = list(range(left_buck, right_buck+bucket_size, bucket_size))
-            result = []
-            # get the ids reqd.
-            loc_ids = set()
-            if buckets_reqd:
-                for buck in buckets_reqd:
-                    if buck in self.genome.buckets[loc["chr"]]:
-                        loc_ids.update(self.genome.buckets[loc["chr"]][buck]) # set = unique ids
-
-                for index in loc_ids:
-                    #print loc.qcollide(self.linearData[index]["loc"]), loc, self.linearData[index]["loc"]
-                    if loc.qcollide(self.genome.linearData[index]["loc"]):
-                        result.append(self.genome.linearData[index])
-
-                read1_feat = []
-                read1_type = []
-                if result:
-                    for r in result:
-                        read1_feat.append(r['name'])
-                        read1_type.append(r['type'])
-
-            if read1_feat:
-                read1_feat = ', '.join(set(read1_feat))
-                read1_type = ', '.join(set(read1_type))
-            else:
-                read1_feat = 'None'
-                read1_type = 'None'
-
-            output.append('\t'.join(line[0:3] + [read1_feat, read1_type]))
-
-            #print(output[-1])
-
-            done += 1
-
-            if done % 1000 == 0:
-                logger('Processed: {:,}'.format(done))
-                #break
-
-        logger('Processed {:,} reads'.format(len(output)))
+        oh = open(out_filename, 'w')
+        for k in sorted(result.keys()):
+            oh.write('{0}\t{1}\n'.format(k, result[k]))
         oh.close()
-
-        out = open(out_filename, 'w')
-        for o in output:
-            out.write('%s\n' % o)
-        out.close()
+        log.info('Saved {0}'.format(out_filename))
 
 # Command-line options;
 def prepare_parser():
@@ -222,6 +136,7 @@ def prepare_parser():
     # Optional:
     optional = parser._action_groups.pop()
     optional.add_argument('-e', '--expwhite', nargs=1, required=False, help='A txt file containing the expected whitelist of barcodes to correct the observed barcodes with')
+    optional.add_argument('--pe', action='store_true', required=False, help='Set mode to PE (paried-end) mode, default is single-end mode')
 
     required = parser.add_argument_group('required arguments')
 
@@ -246,27 +161,29 @@ def main():
     parser = prepare_parser()
     args = parser.parse_args()
 
-    logger = parser.log
+    log = parser.log
 
-    logger.info('Arguments:')
-    logger.info('  inbam: %s' % args.inbam[0])
-    logger.info('  outtsv: %s' % args.outtsv[0])
-    logger.info('  genome: "%s"' % args.genome[0])
+    log.info('Arguments:')
+    log.info('  inbam: %s' % args.inbam[0])
+    log.info('  outtsv: %s' % args.outtsv[0])
+    log.info('  genome: "%s"' % args.genome[0])
+    log.info('  paired-end: {0}'.format(args.pe))
 
-    logger.info('Finding Genome')
+    log.info('Finding Genome')
     species = args.genome[0]
     if not common.check_species(species):
         sys.exit()
 
     mte = measureTE(sys.argv[0])
-    mte.bind_genome(os.path.join(script_path, 'genome/%s_glb_gencode_tes.glb' % species), logger=logger)
+    mte.bind_genome(os.path.join(script_path, 'genome/%s_glb_gencode_tes.glb' % species))
+    log.info('Found and loaded {0} genome'.format(args.genome[0]))
 
     if args.pe:
-        result = mte.parse_bampe(args.inbam[0], logger=logger)
+        result = mte.parse_bampe(args.inbam[0], log=log)
     else:
         1/0 # Not implemented!!!
 
-    mte.save_result(result, args.outtsv[0], logger=logger)
+    mte.save_result(result, args.outtsv[0], log=log)
 
 if __name__ == '__main__':
     try:
