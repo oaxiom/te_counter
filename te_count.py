@@ -25,14 +25,14 @@ class measureTE:
         '''
         self.base_path = base_path
 
-    def bind_genome(self, genelist_glb_filename):
+    def bind_genome(self, genelist_glb_filename, logger=None):
         self.genome = glbase3.glload(genelist_glb_filename)
-        print('Loaded %s' % genelist_glb_filename)
+        logger('Loaded %s' % genelist_glb_filename)
 
-    def load_bedpe(self, filename, out_filename):
+    def parse_bampe(self, filename, out_filename, logger=None):
         '''
         **Purpose**
-            Load in a BEDPE file, ideally output by collect_valid_pairs.py, although I guess any valid BEDPE will do
+            Load in a BAMPE file, ideally output by collect_valid_pairs.py, although I guess any valid BEDPE will do
 
         **Arguments**
             filename (Required)
@@ -45,15 +45,16 @@ class measureTE:
 
         output = []
 
-        oh = open(filename, 'r')
-        for idx, line in enumerate(oh):
+        read = pysam.AlignmentFile(filename, 'r')
+
+        for idx, line in enumerate(read):
             line = line.strip().split('\t')
 
             # reach into the genelist guts...
             # work out which of the buckets is required:
             loc = glbase3.location(chr=line[0], left=line[1], right=line[2])
-            left_buck = int((loc["left"]-1)/bucket_size) * bucket_size
-            right_buck = int((loc["right"])/bucket_size) * bucket_size
+            left_buck = ((loc["left"]-1)//bucket_size) * bucket_size
+            right_buck = ((loc["right"])//bucket_size) * bucket_size
             buckets_reqd = list(range(left_buck, right_buck+bucket_size, bucket_size))
             result = []
             # get the ids reqd.
@@ -77,8 +78,8 @@ class measureTE:
 
             # work out which of the buckets is required:
             loc = glbase3.location(chr=line[3], left=line[4], right=line[5])
-            left_buck = int((loc["left"]-1)/bucket_size) * bucket_size
-            right_buck = int((loc["right"])/bucket_size) * bucket_size
+            left_buck = ((loc["left"]-1)//bucket_size) * bucket_size
+            right_buck = ((loc["right"])//bucket_size) * bucket_size
             buckets_reqd = list(range(left_buck, right_buck+bucket_size, bucket_size))
             result = []
             # get the ids reqd.
@@ -120,11 +121,11 @@ class measureTE:
 
             done += 1
 
-            if done % 1000000 == 0:
-                print('Processed: {:,}'.format(done))
-                #break
+            if done % 10 == 0:
+                logger('Processed: {:,}'.format(done))
+                break
 
-        print('Processed {:,} reads'.format(len(output)))
+        logger('Processed {:,} reads'.format(len(output)))
         oh.close()
 
         out = open(out_filename, 'w')
@@ -132,7 +133,7 @@ class measureTE:
             out.write('%s\n' % o)
         out.close()
 
-    def load_bed(self, filename, out_filename, expand_bed=0):
+    def parse_bamse(self, filename, out_filename, expand_bed=0, logger=None):
         '''
         **Purpose**
             Load in a BED file, ideally output by collect_valid_pairs.py,
@@ -199,11 +200,11 @@ class measureTE:
 
             done += 1
 
-            if done % 1000000 == 0:
-                print('Processed: {:,}'.format(done))
+            if done % 1000 == 0:
+                logger('Processed: {:,}'.format(done))
                 #break
 
-        print('Processed {:,} reads'.format(len(output)))
+        logger('Processed {:,} reads'.format(len(output)))
         oh.close()
 
         out = open(out_filename, 'w')
@@ -211,22 +212,65 @@ class measureTE:
             out.write('%s\n' % o)
         out.close()
 
-if __name__ == '__main__':
-    if len(sys.argv) != 4:
-        print('\nNot enough arguments')
-        print('assign_to_te.py species in.bedpe out.tsv')
-        common.print_species()
-        print()
-        sys.exit()
+# Command-line options;
+def prepare_parser():
+    exmp = 'te_count.py -i in.bam -o out.bam -g genome'
 
-    species = sys.argv[1]
+    description = 'Counts up the number of reads that overlap some set of gene/TE features'
+
+    parser = argparse.ArgumentParser(prog='te_count', description=description, epilog=exmp)
+    # Optional:
+    optional = parser._action_groups.pop()
+    optional.add_argument('-e', '--expwhite', nargs=1, required=False, help='A txt file containing the expected whitelist of barcodes to correct the observed barcodes with')
+
+    required = parser.add_argument_group('required arguments')
+
+    required.add_argument('-i', '--inbam', nargs=1, required=True, help='the BAM alignment file containing the reads')
+    required.add_argument('-o', '--outtsv', nargs=1, required=True, help='theTSV file to save the genees and count data to')
+    required.add_argument('-g', '--genome', nargs=1, required=True, help='A txt file to save the observed barcode whitelist to')
+
+    parser._action_groups.append(optional)
+
+    logging.basicConfig(level=logging.DEBUG,
+                    format='%(levelname)-8s: %(message)s',
+                    datefmt='%m-%d %H:%M')
+
+    parser.log = logging.getLogger('te_count')
+
+    return parser
+
+def main():
+    assert sys.version_info >= (3, 6), 'Python >=3.6 is required'
+
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    parser = prepare_parser()
+    args = parser.parse_args()
+
+    logger = parser.log
+
+    logger.info('Arguments:')
+    logger.info('  inbam: %s' % args.inbam[0])
+    logger.info('  outtsv: %s' % args.outtsv[0])
+    logger.info('  genome: "%s"' % args.genome[0])
+
+    logger.info('Finding Genome')
+    species = args.genome[0]
     if not common.check_species(species):
         sys.exit()
 
-    script_path = os.path.dirname(os.path.realpath(__file__))
-
     mte = measureTE(sys.argv[0])
-    mte.bind_genome(os.path.join(script_path, 'genome/%s_glb_gencode_tes.glb' % species))
-    mte.load_bedpe(sys.argv[2], sys.argv[3])
+    mte.bind_genome(os.path.join(script_path, 'genome/%s_glb_gencode_tes.glb' % species), logger=logger)
 
+    if args.pe:
+        result = mte.parse_bampe(args.inbam[0], logger=logger)
+    else:
+        1/0 # Not implemented!!!
 
+    mte.save_result(result, args.outtsv[0], logger=logger)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.stderr.write("User interrupt\n")
+        sys.exit(0)
