@@ -28,7 +28,6 @@ class measureTE:
     def bind_genome(self, genelist_glb_filename):
         self.genome = glbase3.glload(genelist_glb_filename)
         self.all_feature_names = sorted(list(set(self.genome['ensg'])))
-        print(self.all_feature_names)
 
     def parse_bampe(self, filename, log=None):
         '''
