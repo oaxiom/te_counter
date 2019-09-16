@@ -24,6 +24,7 @@ class measureTE:
 
         '''
         self.base_path = base_path
+        self.total_reads = 0
 
     def bind_genome(self, genelist_glb_filename):
         self.genome = glbase3.glload(genelist_glb_filename)
@@ -115,6 +116,7 @@ class measureTE:
 
         sam.close()
         log.info('Processed {:,} reads'.format(idx))
+        self.total_reads = idx
 
         return final_results
 
@@ -150,9 +152,12 @@ class measureTE:
         '''
         assert out_filename, 'You must specify a filename'
 
+        total_reads = total_reads/1e6
+
         oh = open(out_filename, 'w')
         for k in sorted(result.keys()):
-            oh.write('{0}\t{1}\n'.format(k, result[k]))
+            cpm = result[k] / total_reads
+            oh.write('{0}\t{1}\t{2}\n'.format(k, result[k], cpm))
         oh.close()
         log.info('Saved {0}'.format(out_filename))
 
