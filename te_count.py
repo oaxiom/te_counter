@@ -152,7 +152,7 @@ class measureTE:
         '''
         assert out_filename, 'You must specify a filename'
 
-        total_reads = total_reads/1e6
+        total_reads = self.total_reads/1e6
 
         oh = open(out_filename, 'w')
         for k in sorted(result.keys()):
