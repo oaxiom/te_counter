@@ -123,7 +123,7 @@ class measureTE:
     def parse_bamse(self, filename, log=None):
         '''
         **Purpose**
-            Load in a BAMPE file
+            Load in a BAMSE file
 
         **Arguments**
             filename (Required)
