@@ -120,7 +120,7 @@ class measureTE:
 
         return final_results
 
-    def parse_bamse(self, filename, logger=None):
+    def parse_bamse(self, filename, log=None):
         '''
         **Purpose**
             Load in a BAMPE file
@@ -192,13 +192,13 @@ class measureTE:
                                 final_results[e] += 1
                         #print()
                 if idx % 1000000 == 0:
-                    log.info('Processed {:,} reads'.format(idx))
+                    log.info('Processed {:,} SE reads'.format(idx))
                     #break
         except StopIteration:
             pass # the last read
 
         sam.close()
-        log.info('Processed {:,} reads'.format(idx))
+        log.info('Processed {:,} SE reads'.format(idx))
         self.total_reads = idx
 
         return final_results
