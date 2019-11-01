@@ -51,7 +51,7 @@ p = progressbar(len(gencode))
 for idx, item in enumerate(gencode):
     if item['feature'] == 'exon':
         continue
-    if item['gene_type'] not in ('protein_coding', 'lincRNA'):
+    if item['gene_type'] not in ('protein_coding', 'lncRNA'):
         continue
     if item['loc']['chr'] not in chr_set:
         continue

@@ -55,7 +55,7 @@ for idx, item in enumerate(gencode):
         continue
 
     #print(item)
-    if item['gene_type'] not in ('protein_coding', 'lincRNA'):
+    if item['gene_type'] not in ('protein_coding', 'lncRNA'):
         continue
 
     if item['loc']['chr'] not in chr_set:
