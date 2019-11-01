@@ -16,7 +16,7 @@ rmsk_track_form = {"force_tsv": True, 'loc': 'location(chr=column[5], left=colum
 chr_set = frozenset(['X', 'Y'] + ['%s' % i for i in range(1, 30)])
 
 repeats = delayedlist(filename='mm10_rmsk.txt.gz', gzip=True, format=rmsk_track_form)
-gencode = delayedlist('gencode.vM20.annotation.gtf.gz', gzip=True, format=format.gtf)
+gencode = delayedlist('gencode.vM23.annotation.gtf.gz', gzip=True, format=format.gtf)
 
 keep_classes = frozenset(['LINE', 'LTR', 'SINE', 'DNA', 'Retroposon'])
 
