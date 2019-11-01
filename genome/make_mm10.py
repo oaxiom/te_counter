@@ -51,7 +51,7 @@ print('\nAdded %s features' % added)
 print('Gencode')
 p = progressbar(len(gencode))
 for idx, item in enumerate(gencode):
-    if item['feature'] == 'exon':
+    if item['feature'] != 'exon': # i.e. only include in the annotation if it is an exon
         continue
 
     #print(item)
