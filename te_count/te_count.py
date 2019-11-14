@@ -9,7 +9,7 @@ A very simple counter for
 import sys, os, argparse, logging
 import glbase3 # glbase3 namespace mangling!
 import pysam
-import common
+from . import common
 
 class measureTE:
     def __init__(self, base_path):

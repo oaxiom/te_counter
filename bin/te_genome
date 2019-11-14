@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+
+'''
+
+A very simple counter for
+
+'''
+
+import sys, os, argparse, logging
+import glbase3 # glbase3 namespace mangling!
+import pysam
+import common
+sys.path.append('../')
+import te_count
+
+# Command-line options;
+def prepare_parser():
+    exmp = 'te_genome -g genome -m mode'
+
+    description = 'Builds the indices for te_count'
+
+    parser = argparse.ArgumentParser(prog='te_count', description=description, epilog=exmp)
+
+    required = parser.add_argument_group('required arguments')
+    required.add_argument('-m', '--mode', nargs=1, required=True, help='one of {0}'.format())
+    required.add_argument('-g', '--genome', nargs=1, required=True, help='A txt file to save the observed barcode whitelist to')
+
+    logging.basicConfig(level=logging.DEBUG,
+                    format='%(levelname)-8s: %(message)s',
+                    datefmt='%m-%d %H:%M')
+    parser.log = logging.getLogger('te_genome')
+
+    return parser
+
+def main():
+    assert sys.version_info >= (3, 6), 'Python >=3.6 is required'
+
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    parser = prepare_parser()
+    args = parser.parse_args()
+
+    log = parser.log
+
+    log.info('Arguments:')
+    log.info('  genome: "%s"' % args.genome[0])
+    log.info('  inbam: %s' % args.mode[0])
+
+    log.info('Finding Genome')
+    species = args.genome[0]
+    if not common.check_species(species):
+        log.error('{0} genome not found'.format(species))
+        common.print_species(log=log)
+        sys.exit()
+
+    mte = measureTE(sys.argv[0])
+    mte.bind_genome(os.path.join(script_path, 'genome/%s_glb_gencode_tes.glb' % species))
+    log.info('Found and loaded {0} genome'.format(args.genome[0]))
+
+    if args.se:
+        result = mte.parse_bamse(args.inbam[0], log=log)
+    else:
+        result = mte.parse_bampe(args.inbam[0], log=log)
+
+    mte.save_result(result, args.outtsv[0], log=log)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.stderr.write("User interrupt\n")
+        sys.exit(0)
