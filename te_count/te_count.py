@@ -54,6 +54,10 @@ class measureTE:
                 idx += 1
                 read1 = next(sam)
                 read2 = next(sam)
+
+                if int(read1.mapping_quality) < 20: # these guys share mapq
+                    continue
+
                 if read1.is_unmapped or read1.is_duplicate or read1.is_qcfail:
                     continue
                 if read2.is_unmapped or read2.is_duplicate or read2.is_qcfail:
@@ -256,6 +260,9 @@ class measureTE:
                 idx += 1
                 read1 = next(sam)
                 if read1.is_unmapped or read1.is_duplicate or read1.is_qcfail:
+                    continue
+
+                if int(read1.mapping_quality) < 20:
                     continue
 
                 chrom = read1.reference_name.replace('chr', '')
