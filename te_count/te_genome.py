@@ -10,7 +10,7 @@ import sys, os, argparse, logging
 from . import common
 
 # Genome builders:
-from .genome import make_genes_tes
+from .genome import make_genes_tes, make_enh
 
 class index:
     def __init__(self):
@@ -42,6 +42,8 @@ class index:
         if mode == 'genes_tes':
             return make_genes_tes(genome)
         elif mode == 'enhancers':
+            return make_enh(genome)
+        elif more == 'tes': # TODO
             pass
 
         return False

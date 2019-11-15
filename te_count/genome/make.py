@@ -67,8 +67,6 @@ def make_genes_tes(genome):
         #print(newentry)
         added += 1
 
-        #if idx > 100000:
-        #    break
         p.update(idx)
 
     print('\nAdded {:,} features'.format(added))
@@ -104,3 +102,41 @@ def make_genes_tes(genome):
     gl.save('{0}/{1}'.format(script_path, final_name))
 
     return True
+
+def make_enh(genome):
+    from .. import miniglbase
+    script_path = os.path.dirname(os.path.realpath(__file__))
+
+    filename = 'enh_{0}.bed.gz'.format(genome)
+    final_name = '{0}_enhancers.glb'.format(genome)
+
+    enh_url = 'http://fantom.gsc.riken.jp/5/datafiles/reprocessed/{0}_latest/extra/enhancer/F5.{0}.enhancers.bed.gz'.format(genome)
+    os.system('wget -c -O {0}/{1} {2}'.format(script_path, filename, enh_url))
+
+    script_path = os.path.dirname(os.path.realpath(__file__))
+
+    chr_set = frozenset(['X', 'Y'] + ['%s' % i for i in range(1, 30)])
+
+    enh = miniglbase.genelist(filename=os.path.join(script_path, filename), gzip=True, format={'force_tsv': True, 'loc': 'location(chr=column[0], left=column[1], right=column[2])'})
+
+    newl = []
+    added = 0
+    p = miniglbase.progressbar(len(enh))
+    for idx, item in enumerate(enh):
+        newentry = {'loc': item['loc'],
+            'name': 'F5enh_{0}_{1}_{2}_{3}'.format(genome, item['loc']['chr'], item['loc']['left'], item['loc']['right']),
+            'type': 'enhancer',
+            'ensg': 'F5enh_{0}_{1}_{2}_{3}'.format(genome, item['loc']['chr'], item['loc']['left'], item['loc']['right']),
+            }
+
+        if item['loc']['chr'] not in chr_set:
+            continue
+
+        newl.append(newentry)
+        added += 1
+
+    print('\nAdded {:,} features'.format(added))
+    p.update(idx)
+    gl = miniglbase.genelist()
+    gl.load_list(newl)
+    gl.save('{0}/{1}'.format(script_path, final_name))

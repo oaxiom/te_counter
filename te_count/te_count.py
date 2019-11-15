@@ -112,6 +112,9 @@ class measureTE:
                         elif 'TE' in types:
                             for e in ensgs: # Not in any other mRNA, so okay to count as a TE
                                 final_results[e] += 1
+                        elif 'enhancer' in types:
+                            for e in ensgs: # Not in any other mRNA, so okay to count as a TE
+                                final_results[e][barcode] += 1
                         #print()
                 if idx % 1000000 == 0:
                     log.info('Processed {:,} reads'.format(idx))
@@ -198,6 +201,9 @@ class measureTE:
                         elif 'TE' in types:
                             for e in ensgs: # Not in any other mRNA, so okay to count as a TE
                                 final_results[e] += 1
+                        elif 'enhancer' in types:
+                            for e in ensgs: # Not in any other mRNA, so okay to count as a TE
+                                final_results[e][barcode] += 1
                         #print()
                 if idx % 1000000 == 0:
                     log.info('Processed {:,} SE reads'.format(idx))
@@ -335,6 +341,9 @@ class measureTE:
                         elif 'TE' in types:
                             for e in ensgs: # Not in any other mRNA, so okay to count as a TE
                                 final_results[e][barcode] += 1
+                        elif 'enhancer' in types:
+                            for e in ensgs: # Not in any other mRNA, so okay to count as a TE
+                                final_results[e][barcode] += 1
                         #print()
 
         except StopIteration:
@@ -375,13 +384,13 @@ class measureTE:
 
         oh = open(out_filename, 'w')
 
-        oh.write('{0}\t{1}\n'.format('name', '\t'.join(barcodes_to_do)))
+        oh.write('{0}\t{1}\n'.format('name', '\t'.join(result.keys())))
 
-        for feature in result:
+        for barcode in barcodes_to_do:
             counts = []
-            for barcode in barcodes_to_do:
+            for feature in result:
                 counts.append(result[feature][barcode])
-            oh.write('{0}\n'.format('\t'.join([feature] + [str(c) for c in counts])))
+            oh.write('{0}\n'.format('\t'.join([barcode] + [str(c) for c in counts])))
         oh.close()
 
 
