@@ -4,36 +4,28 @@ Package for genome annotations
 
 '''
 
-from .. import common
+import os
 
 valid_assemblies = {'mm10', 'hg38'}
 valid_modes = {'genes_tes', 'enhancers'}
 
-class indices:
-    def __init__():
-        """
-        **Purpose**
-            Genome container
+from .. import common
+from .make_mm10 import make_mm10_genes_tes
 
-        """
-
-def build_index(assembly, mode='genes_tes'):
+def check_genome_available(genome, mode):
     """
     **Purpose**
-        Build an index for te_count.py
-
-    **Arguments**
-        assembly (Required)
-            build for the specified assembly.
-
-            valid assemblies are {0}
-
-        mode (Optional, default='genes_tes')
-            build the index for the specified mode
-
-            valid modes are {1}
+        Check that the genome has been built
 
     **Returns**
-        None
+        True of False
+    """
+    assert genome in common.valid_assemblies, '{0} genome assembly not in the list of valid assemblies: {1}'.format(genome, common.valid_assemblies)
+    assert mode in common.valid_modes, '{0} mode not in the list of valid modes: {1}'.format(mode, common.valid_modes)
 
-    """.format(valid_assemblies, valid_modes)
+    filename = '{0}_{1}.glb'.format(genome, mode)
+
+    # Check the filename is here:
+    if os.path.exists(filename):
+        return True
+    return False

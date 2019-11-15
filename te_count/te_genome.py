@@ -7,76 +7,50 @@ A very simple counter for
 '''
 
 import sys, os, argparse, logging
-import glbase3 # glbase3 namespace mangling!
-import pysam
 from . import common
 
-class measureTE:
-    def bind_genome(self, genelist_glb_filename):
-        self.genome = glbase3.glload(genelist_glb_filename)
-        self.all_feature_names = sorted(list(set(self.genome['ensg'])))
+# Genome builders:
+from .genome import make_mm10_genes_tes
 
+class index:
+    def __init__(self):
+        pass
 
-# Command-line options;
-def prepare_parser():
-    exmp = 'te_count.py -i in.bam -o out.bam -g genome'
+    def build_index(self, genome, mode):
+        """
+        **Purpose**
+            Build an index for te_count
 
-    description = 'Counts up the number of reads that overlap some set of gene/TE features'
+        **Arguments**
+            assembly (Required)
+                build for the specified assembly.
 
-    parser = argparse.ArgumentParser(prog='te_count', description=description, epilog=exmp)
+                valid assemblies are {0}
 
-    # Optional:
-    optional = parser._action_groups.pop()
-    optional.add_argument('--se', action='store_true', required=False, help='Set mode to SE (single-end) mode, default is paired-end mode')
+            mode (Optional, default='genes_tes')
+                build the index for the specified mode
 
-    required = parser.add_argument_group('required arguments')
+                valid modes are {1}
 
-    required.add_argument('-i', '--inbam', nargs=1, required=True, help='the BAM alignment file containing the reads')
-    required.add_argument('-o', '--outtsv', nargs=1, required=True, help='the TSV file to save the genes and count data to')
-    required.add_argument('-g', '--genome', nargs=1, required=True, help='A txt file to save the observed barcode whitelist to')
+        **Returns**
+            None
 
-    parser._action_groups.append(optional)
+        """.format(common.valid_assemblies, common.valid_modes)
+        assert genome in common.valid_assemblies, '{0} genome assembly not in the list of valid assemblies: {1}'.format(genome, common.valid_assemblies)
+        assert mode in common.valid_modes, '{0} mode not in the list of valid modes: {1}'.format(mode, common.valid_modes)
 
-    logging.basicConfig(level=logging.DEBUG,
-                    format='%(levelname)-8s: %(message)s',
-                    datefmt='%m-%d %H:%M')
+        if genome == 'mm10':
+            if mode == 'genes_tes':
+                return make_mm10_genes_tes()
+            elif mode == 'enhancers':
+                pass
+        elif genome == 'hg38':
+            if mode == 'genes_tes':
+                pass
+            elif mode == 'enhancers':
+                pass
 
-    parser.log = logging.getLogger('te_count')
-
-    return parser
-
-def main():
-    assert sys.version_info >= (3, 6), 'Python >=3.6 is required'
-
-    script_path = os.path.dirname(os.path.realpath(__file__))
-    parser = prepare_parser()
-    args = parser.parse_args()
-
-    log = parser.log
-
-    log.info('Arguments:')
-    log.info('  inbam: %s' % args.inbam[0])
-    log.info('  outtsv: %s' % args.outtsv[0])
-    log.info('  genome: "%s"' % args.genome[0])
-    log.info('  single-end mode: {0} (default is PE)'.format(args.se))
-
-    log.info('Finding Genome')
-    species = args.genome[0]
-    if not common.check_species(species):
-        log.error('{0} genome not found'.format(species))
-        common.print_species(log=log)
-        sys.exit()
-
-    mte = measureTE(sys.argv[0])
-    mte.bind_genome(os.path.join(script_path, 'genome/%s_glb_gencode_tes.glb' % species))
-    log.info('Found and loaded {0} genome'.format(args.genome[0]))
-
-    if args.se:
-        result = mte.parse_bamse(args.inbam[0], log=log)
-    else:
-        result = mte.parse_bampe(args.inbam[0], log=log)
-
-    mte.save_result(result, args.outtsv[0], log=log)
+        return False
 
 if __name__ == '__main__':
     try:

@@ -2,28 +2,26 @@
 
 '''
 
-A very simple counter for
+Build the genome indices for te_count
 
 '''
 
 import sys, os, argparse, logging
-import glbase3 # glbase3 namespace mangling!
-import pysam
-import common
+
 sys.path.append('../')
-import te_count
+import te_count.genome
 
 # Command-line options;
 def prepare_parser():
-    exmp = 'te_genome -g genome -m mode'
+    exmp = 'Example usage: te_genome -g genome -m mode'
 
     description = 'Builds the indices for te_count'
 
-    parser = argparse.ArgumentParser(prog='te_count', description=description, epilog=exmp)
+    parser = argparse.ArgumentParser(prog='te_genome', description=description, epilog=exmp)
 
     required = parser.add_argument_group('required arguments')
-    required.add_argument('-m', '--mode', nargs=1, required=True, help='one of {0}'.format())
-    required.add_argument('-g', '--genome', nargs=1, required=True, help='A txt file to save the observed barcode whitelist to')
+    required.add_argument('-m', '--mode', nargs=1, required=True, help='Type of annotation to use, valid modes: {0}'.format(te_count.common.valid_modes))
+    required.add_argument('-g', '--genome', nargs=1, required=True, help='Genome assembly to use, valid genomes: {0}'.format(te_count.common.valid_assemblies))
 
     logging.basicConfig(level=logging.DEBUG,
                     format='%(levelname)-8s: %(message)s',
@@ -40,28 +38,22 @@ def main():
     args = parser.parse_args()
 
     log = parser.log
-
     log.info('Arguments:')
     log.info('  genome: "%s"' % args.genome[0])
-    log.info('  inbam: %s' % args.mode[0])
+    log.info('  mode  : %s' % args.mode[0])
 
     log.info('Finding Genome')
-    species = args.genome[0]
-    if not common.check_species(species):
-        log.error('{0} genome not found'.format(species))
-        common.print_species(log=log)
+    genome = args.genome[0]
+
+    filename = te_count.genome.check_genome_available(genome, args.mode[0])
+    if filename:
+        log.error('{0}/{1} genome already built "{2}"'.format(genome, args.mode[0], filename))
         sys.exit()
+    log.info('{0}/{1} genome not found, building'.format(genome, args.mode[0]))
 
-    mte = measureTE(sys.argv[0])
-    mte.bind_genome(os.path.join(script_path, 'genome/%s_glb_gencode_tes.glb' % species))
-    log.info('Found and loaded {0} genome'.format(args.genome[0]))
-
-    if args.se:
-        result = mte.parse_bamse(args.inbam[0], log=log)
-    else:
-        result = mte.parse_bampe(args.inbam[0], log=log)
-
-    mte.save_result(result, args.outtsv[0], log=log)
+    idx = te_count.te_genome.index()
+    idx.build_index(genome, args.mode[0])
+    log.info('Done')
 
 if __name__ == '__main__':
     try:

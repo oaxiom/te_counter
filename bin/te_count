@@ -15,7 +15,7 @@ import te_count
 
 # Command-line options;
 def prepare_parser():
-    exmp = 'te_count -i in.bam -o out.bam -g genome'
+    exmp = 'Example usage:\nte_count -i in.bam -o out.bam -g genome -m genes_tes'
 
     description = 'Counts up the number of reads that overlap some set of gene/TE features'
 
@@ -24,14 +24,15 @@ def prepare_parser():
     # Optional:
     optional = parser._action_groups.pop()
     optional.add_argument('--se', action='store_true', required=False, help='Set mode to SE (single-end) mode, default is paired-end mode')
-    optional.add_argument('--sc', action='store_true', required=False, help='Set te_count to single-cell mode, default is bulk. Expects an CR:Z flag in the BAM/SAM file')
+    optional.add_argument('--sc', action='store_true', required=False, help='Set te_count to single-cell mode, default is bulk. Expects an CR:Z flag in the BAM/SAM file. Make sure you set --se appropriately')
     optional.add_argument('--noumi', action='store_true', required=False, help='If --sc is set, but this single cell data has no UMI in a UR:Z tag, set this switch')
 
     required = parser.add_argument_group('required arguments')
 
     required.add_argument('-i', '--inbam', nargs=1, required=True, help='the BAM alignment file containing the reads')
     required.add_argument('-o', '--outtsv', nargs=1, required=True, help='the TSV file to save the genes and count data to')
-    required.add_argument('-g', '--genome', nargs=1, required=True, help='A txt file to save the observed barcode whitelist to')
+    required.add_argument('-g', '--genome', nargs=1, required=True, help='Genome assembly to use, valid genomes: {0}'.format(te_count.common.valid_assemblies))
+    required.add_argument('-m', '--mode', nargs=1, required=True, help='Type of annotation to use, valid modes: {0}'.format(te_count.common.valid_modes))
 
     parser._action_groups.append(optional)
 
@@ -56,18 +57,23 @@ def main():
     log.info('  inbam: %s' % args.inbam[0])
     log.info('  outtsv: %s' % args.outtsv[0])
     log.info('  genome: "%s"' % args.genome[0])
+    log.info('  mode: "%s"' % args.mode[0])
     log.info('  single-end mode: {0} (default is PE)'.format(args.se))
+    if args.sc:
+        log.info('  single cell mode: {0} (default is Bulk)'.format(args.sc))
+        log.info('  No UMI: {0} (default is Bulk)'.format(args.noumi))
 
     log.info('Finding Genome')
-    species = args.genome[0]
-    if not te_count.common.check_species(species):
-        log.error('{0} genome not found'.format(species))
+    genome = args.genome[0]
+    if not te_count.common.check_genome_available(genome):
+        log.error('{0}/{1} genome not found, please run te_build'.format(genome, args.mode[0]))
         te_count.common.print_species(log=log)
         sys.exit()
+    log.info('Found Genome {0}/{1}'.format(genome, args.mode[0]))
 
     mte = te_count.measureTE(sys.argv[0])
-    mte.bind_genome(os.path.join(script_path, '../te_count/genome/%s_glb_gencode_tes.glb' % species))
-    log.info('Found and loaded {0} genome'.format(args.genome[0]))
+    mte.bind_genome(os.path.join(script_path, '../te_count/genome/{0}_{1}_glb_gencode_tes.glb'.format(genome, args.mode[0])))
+    log.info('Found and loaded {0} genome {1}'.format(args.genome[0], args.mode[0]))
 
     if args.se:
         result = mte.parse_bamse(args.inbam[0], log=log)
