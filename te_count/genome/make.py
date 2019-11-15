@@ -10,12 +10,13 @@ This is for the mm10 genome
 
 import sys, os
 
-def make_mm10_genes_tes():
+def make_genes_tes(genome):
     from .. import miniglbase
 
-    genome = 'mm10'
     gencode_version = 'vM23'
     gencode_name = 'gencode.{0}.annotation.gtf.gz'.format(gencode_version)
+    # We have to hardcode the gencode URL as it's location can change:
+    gencode_url = 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/{0}'.format(gencode_name)
     repeat_name = '{0}_rmsk.txt.gz'.format(genome)
     final_name = '{0}_genes_tes.glb'.format(genome)
 
@@ -29,9 +30,9 @@ def make_mm10_genes_tes():
     script_path = os.path.dirname(os.path.realpath(__file__))
 
     # Do the downloads, rely on wget to confirm if they are valid downloads:
-    os.system('wget -c -O {0}/{1}               ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/{1}'.format(script_path, gencode_name))
-    os.system('wget -c -O {0}/{1}               http://hgdownload.soe.ucsc.edu/goldenPath/mm10/database/rmsk.txt.gz'.format(script_path, repeat_name))
-    os.system('wget -c -O {0}/{1}.chromSizes.gz ftp://hgdownload.cse.ucsc.edu/goldenPath/mm10/database/chromInfo.txt.gz'.format(script_path, genome))
+    os.system('wget -c -O {0}/{1}               {2}'.format(script_path, gencode_name, gencode_url))
+    os.system('wget -c -O {0}/{1}               http://hgdownload.soe.ucsc.edu/goldenPath/{2}/database/rmsk.txt.gz'.format(script_path, repeat_name, genome))
+    os.system('wget -c -O {0}/{1}.chromSizes.gz ftp://hgdownload.cse.ucsc.edu/goldenPath/{1}/database/chromInfo.txt.gz'.format(script_path, genome))
     if sys.platform == 'darwin':
         os.system("gunzip -c {0}/{1}.chromSizes.gz | grep -v -E 'random|chrUn|chrM'  >{0}/{1}.chromSizes.clean".format(script_path, genome))
     else:

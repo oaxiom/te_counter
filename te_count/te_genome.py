@@ -10,7 +10,7 @@ import sys, os, argparse, logging
 from . import common
 
 # Genome builders:
-from .genome import make_mm10_genes_tes
+from .genome import make_genes_tes
 
 class index:
     def __init__(self):
@@ -39,16 +39,10 @@ class index:
         assert genome in common.valid_assemblies, '{0} genome assembly not in the list of valid assemblies: {1}'.format(genome, common.valid_assemblies)
         assert mode in common.valid_modes, '{0} mode not in the list of valid modes: {1}'.format(mode, common.valid_modes)
 
-        if genome == 'mm10':
-            if mode == 'genes_tes':
-                return make_mm10_genes_tes()
-            elif mode == 'enhancers':
-                pass
-        elif genome == 'hg38':
-            if mode == 'genes_tes':
-                pass
-            elif mode == 'enhancers':
-                pass
+        if mode == 'genes_tes':
+            return make_genes_tes(genome)
+        elif mode == 'enhancers':
+            pass
 
         return False
 
