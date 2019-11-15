@@ -3,5 +3,5 @@
 __pycache__
 *.glb
 *.gz
-*.tsv
 *.clean
+bulk_out_PE.tsv
