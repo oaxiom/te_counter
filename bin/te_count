@@ -10,7 +10,8 @@ import sys, os, argparse, logging
 import glbase3 # glbase3 namespace mangling!
 import pysam
 
-sys.path.append('../')
+script_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(script_path, '../'))
 import te_count
 
 # Command-line options;

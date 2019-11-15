@@ -8,7 +8,8 @@ Build the genome indices for te_count
 
 import sys, os, argparse, logging
 
-sys.path.append('../')
+script_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(script_path, '../'))
 import te_count.genome
 
 # Command-line options;
