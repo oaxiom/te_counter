@@ -6,6 +6,7 @@ A counter for various genome features in a range of data.
 
 import sys, os, argparse, logging
 from collections import defaultdict
+from operator import itemgetter
 from . import miniglbase # miniglbase namespace mangling!
 import pysam
 from . import common
@@ -345,7 +346,7 @@ class measureTE:
 
         return final_results
 
-    def sc_save_result(self, result, out_filename, log=None):
+    def sc_save_result(self, result, out_filename, maxcells, log=None):
         '''
         **Purpose**
             Save the data to a TSV file
@@ -357,14 +358,28 @@ class measureTE:
         assert out_filename, 'You must specify a filename'
 
         log.info('Densifying and saving "{0}"'.format(out_filename))
+        log.info('Found {0:,} barcodes'.format(len(self.barcodes)))
+
+        if len(self.barcodes) > maxcells: # Or dont bother doing
+            # Work out the maxcells barcodes to save
+            log.info('Keeping the best {0} barcodes'.format(maxcells))
+            barcode_column_scores = defaultdict(int)
+            for feature in result:
+                for barcode in self.barcodes: # see sc_parse_bamse()
+                    barcode_column_scores[barcode] += result[feature][barcode]
+
+            barcodes_to_do = sorted(barcode_column_scores.items(), key=itemgetter(1), reverse=True)
+            barcodes_to_do = [i[0] for i in barcodes_to_do][0:maxcells]
+        else:
+            barcodes_to_do = self.barcodes # see sc_parse_bamse()
 
         oh = open(out_filename, 'w')
 
-        oh.write('{0}\t{1}\n'.format('name', '\t'.join(self.barcodes)))
+        oh.write('{0}\t{1}\n'.format('name', '\t'.join(barcodes_to_do)))
 
         for feature in result:
             counts = []
-            for barcode in self.barcodes: # see sc_parse_bamse()
+            for barcode in barcodes_to_do:
                 counts.append(result[feature][barcode])
             oh.write('{0}\n'.format('\t'.join([feature] + [str(c) for c in counts])))
         oh.close()
