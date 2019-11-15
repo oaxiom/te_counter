@@ -65,14 +65,14 @@ def main():
 
     log.info('Finding Genome')
     genome = args.genome[0]
-    if not te_count.common.check_genome_available(genome):
+    if not te_count.genome.check_genome_available(genome, args.mode[0]):
         log.error('{0}/{1} genome not found, please run te_build'.format(genome, args.mode[0]))
-        te_count.common.print_species(log=log)
+        te_count.common.print_genomes(log=log)
         sys.exit()
     log.info('Found Genome {0}/{1}'.format(genome, args.mode[0]))
 
     mte = te_count.measureTE(sys.argv[0])
-    mte.bind_genome(os.path.join(script_path, '../te_count/genome/{0}_{1}_glb_gencode_tes.glb'.format(genome, args.mode[0])))
+    mte.bind_genome(os.path.join(script_path, '../te_count/genome/{0}_{1}.glb'.format(genome, args.mode[0])))
     log.info('Found and loaded {0} genome {1}'.format(args.genome[0], args.mode[0]))
 
     if args.se:

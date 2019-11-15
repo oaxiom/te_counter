@@ -10,7 +10,7 @@ valid_assemblies = {'mm10', 'hg38'}
 valid_modes = {'genes_tes', 'enhancers'}
 
 from .. import common
-from .make_mm10 import make_genes_tes
+from .make import make_genes_tes
 
 def check_genome_available(genome, mode):
     """
