@@ -60,8 +60,8 @@ def main():
     log.info('  mode: "%s"' % args.mode[0])
     log.info('  single-end mode: {0} (default is PE)'.format(args.se))
     if args.sc:
-        log.info('  single cell mode: {0} (default is Bulk)'.format(args.sc))
-        log.info('  No UMI: {0} (default is Bulk)'.format(args.noumi))
+        log.info('  single cell mode: {0} (default is False/Bulk)'.format(args.sc))
+        log.info('  No UMI: {0} (default is False)'.format(args.noumi))
 
     log.info('Finding Genome')
     genome = args.genome[0]
@@ -76,7 +76,7 @@ def main():
     log.info('Found and loaded {0} genome {1}'.format(args.genome[0], args.mode[0]))
 
     if args.sc:
-        pass
+        mte.parse_bamse_sc(args.inbam[0], UMIS=args.noumi, log=log)
     else:
         if args.se:
             result = mte.parse_bamse(args.inbam[0], log=log)
