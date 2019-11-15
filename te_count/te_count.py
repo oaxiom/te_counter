@@ -13,7 +13,7 @@ import pysam
 from . import common
 
 class measureTE:
-    def __init__(self, base_path):
+    def __init__(self, base_path, quality_threshold):
         '''
         **Purpose**
             Constructor
@@ -26,6 +26,7 @@ class measureTE:
         '''
         self.base_path = base_path
         self.total_reads = 0
+        self.quality_threshold = quality_threshold
 
     def bind_genome(self, genelist_glb_filename):
         self.genome = miniglbase.glload(genelist_glb_filename)
@@ -55,7 +56,7 @@ class measureTE:
                 read1 = next(sam)
                 read2 = next(sam)
 
-                if int(read1.mapping_quality) < 20: # these guys share mapq
+                if int(read1.mapping_quality) < self.quality_threshold: # these guys share mapq
                     continue
 
                 if read1.is_unmapped or read1.is_duplicate or read1.is_qcfail:
@@ -125,7 +126,7 @@ class measureTE:
 
         return final_results
 
-    def parse_bamse_sc(self, filename, UMIS=True, whitelist=None, log=None):
+    def sc_parse_bamse(self, filename, UMIS=True, whitelist=None, log=None):
         '''
         **Purpose**
             Load in a BAMSE file, for single cell data, and look for the CR and UMI tags.
@@ -155,7 +156,7 @@ class measureTE:
                 if read.is_unmapped or read.is_duplicate or read.is_qcfail:
                     continue
 
-                if int(read.mapping_quality) < 20:
+                if int(read.mapping_quality) < self.quality_threshold:
                     continue
 
                 print(read)
@@ -262,7 +263,7 @@ class measureTE:
                 if read1.is_unmapped or read1.is_duplicate or read1.is_qcfail:
                     continue
 
-                if int(read1.mapping_quality) < 20:
+                if int(read1.mapping_quality) < self.quality_threshold:
                     continue
 
                 chrom = read1.reference_name.replace('chr', '')
@@ -322,6 +323,21 @@ class measureTE:
         self.total_reads = idx
 
         return final_results
+
+    def sc_save_result_bulk(self, result, out_filename, log=None):
+        '''
+        **Purpose**
+            Save the data to a TSV file
+
+        **Arguments**
+            out_filename (Required)
+                the filename to save the data to
+        '''
+        assert out_filename, 'You must specify a filename'
+
+        total_reads = self.total_reads/1e6
+
+
 
     def save_result_bulk(self, result, out_filename, log=None):
         '''
