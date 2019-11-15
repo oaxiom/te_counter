@@ -42,7 +42,7 @@ def make_mm10_genes_tes():
     repeats = miniglbase.delayedlist(filename='{0}/{1}'.format(script_path, repeat_name), gzip=True, format=rmsk_track_form)
     gencode = miniglbase.delayedlist('{0}/{1}'.format(script_path, gencode_name), gzip=True, format=gtf_format)
 
-    keep_classes = frozenset(['LINE', 'LTR', 'SINE', 'DNA', 'Retroposon'])
+    keep_classes = frozenset(['LINE', 'LTR', 'SINE', 'DNA', 'Retroposon']) # Retroposon is for human, but we can safely keep it here
 
     added = 0
 
@@ -78,7 +78,6 @@ def make_mm10_genes_tes():
         if item['feature'] != 'exon': # i.e. only include in the annotation if it is an exon
             continue
 
-        #print(item)
         if item['gene_type'] not in ('protein_coding', 'lncRNA'):
             continue
 

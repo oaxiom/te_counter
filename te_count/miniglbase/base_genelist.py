@@ -5,6 +5,23 @@ from shlex import split as shlexsplit
 from . import config
 from .location import location
 
+ignorekeys = frozenset( # these are functional tags - so I should ignore them.
+    ["dialect",
+    "duplicates_key",
+    "skiplines",
+    "debug",
+    "special",
+    "skiptill",
+    "force_tsv",
+    "gtf_decorators",
+    "endwith",
+    "__description__",
+    "commentlines",
+    "keepifxin",
+    '__column_must_be_used',
+    '__ignore_empty_columns'
+    ])
+
 class _base_genelist:
     def __init__(self):
         """
@@ -237,12 +254,21 @@ class _base_genelist:
 
         d = {}
         for key in format:
-            if isinstance(format[key], str) and "location" in format[key]:
-                # locations are very common, add support for them out of the box:
-                d[key] = eval(format[key])
-            else:
-                d[key] = self._guessDataType(column[format[key]])
-
+            if key not in ignorekeys: # ignore these tags
+                if isinstance(format[key], str) and "location" in format[key]:
+                    # locations are very common, add support for them out of the box:
+                    d[key] = eval(format[key])
+                else:
+                    d[key] = self._guessDataType(column[format[key]])
+            elif key == "gtf_decorators": # special exceptions for gtf files
+                gtf = column[format["gtf_decorators"]].strip()
+                for item in gtf.split(";"):
+                    if item:
+                        item = item.strip()
+                        ss = shlexsplit(item)
+                        key = ss[0]
+                        value = ss[1].strip('"')
+                        d[key] = self._guessDataType(value)
         return(d)
 
     def save(self, filename=None, compressed=False):
