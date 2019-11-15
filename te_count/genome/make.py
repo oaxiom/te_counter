@@ -71,7 +71,7 @@ def make_genes_tes(genome):
         #    break
         p.update(idx)
 
-    print('\nAdded %s features' % added)
+    print('\nAdded {:,} features'.format(added))
     print('Gencode')
     p = miniglbase.progressbar(len(gencode))
     for idx, item in enumerate(gencode):
@@ -97,7 +97,7 @@ def make_genes_tes(genome):
 
         p.update(idx)
 
-    print('\nAdded %s features' % added)
+    print('\nAdded {:,} features'.format(added))
 
     gl = miniglbase.genelist()
     gl.load_list(newl)

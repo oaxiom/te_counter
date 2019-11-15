@@ -79,7 +79,7 @@ def main():
     log.info('Found and loaded {0} genome {1}'.format(args.genome[0], args.mode[0]))
 
     if args.sc:
-        mte.sc_parse_bamse(args.inbam[0], UMIS=args.noumi, log=log)
+        result = mte.sc_parse_bamse(args.inbam[0], UMIS=not args.noumi, log=log)
         mte.sc_save_result(result, args.outtsv[0], log=log)
     else:
         if args.se:
