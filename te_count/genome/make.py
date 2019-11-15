@@ -1,10 +1,5 @@
-#!/usr/bin/env python3
-
 '''
-
 Build the combined gencode and repeat data for te_hic
-
-This is for the mm10 genome
 
 '''
 
