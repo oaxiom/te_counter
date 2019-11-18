@@ -307,7 +307,7 @@ class measureTE:
                 # work out which of the buckets is required:
                 left_buck = ((left-1)//bucket_size) * bucket_size
                 right_buck = (rite//bucket_size) * bucket_size
-                buckets_reqd = list(range(left_buck, right_buck+bucket_size, bucket_size))
+                buckets_reqd = range(left_buck, right_buck+bucket_size, bucket_size)
                 result = []
                 # get the ids reqd.
                 loc_ids = set()
@@ -375,7 +375,7 @@ class measureTE:
             barcode_column_scores = defaultdict(int)
             for feature in result:
                 for barcode in self.barcodes: # see sc_parse_bamse()
-                    barcode_column_scores[barcode] += result[feature][barcode]
+                    barcode_column_scores[barcode] += result[feature][barcode] # This explodes the result defaultdict to densify it.
 
             barcodes_to_do = sorted(barcode_column_scores.items(), key=itemgetter(1), reverse=True)
             barcodes_to_do = [i[0] for i in barcodes_to_do][0:maxcells]
@@ -389,7 +389,10 @@ class measureTE:
         for barcode in barcodes_to_do:
             counts = []
             for feature in result:
-                counts.append(result[feature][barcode])
+                if barcode in result[feature]: # Stop defaultdict from densifying
+                    counts.append(result[feature][barcode])
+                else:
+                    counts.append(0)
             oh.write('{0}\n'.format('\t'.join([barcode] + [str(c) for c in counts])))
         oh.close()
 
