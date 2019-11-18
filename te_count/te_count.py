@@ -254,7 +254,7 @@ class measureTE:
         assert filename, 'You must specify a filename'
 
         final_results = {i: defaultdict(int) for i in self.all_feature_names} # pseudo-sparse array
-        self.barcodes = set([])
+        self.barcodes = {}
         umis = defaultdict(set)
         bucket_size = miniglbase.config.bucket_size
 
@@ -283,8 +283,7 @@ class measureTE:
                     continue
 
                 barcode = tags['CR']
-                if barcode not in self.barcodes:
-                    self.barcodes.add(barcode)
+
 
                 if UMIS:
                     umi = '{0}-{1}'.format(tags['UR'], tags['CR']) # UMI should be unique for both
@@ -328,9 +327,17 @@ class measureTE:
                             result.append(self.genome.linearData[index])
 
                     if result:
+                        # We are going to add to something:
+                        if barcode not in self.barcodes:
+                            self.barcodes[barcode] = 0
+                        self.barcodes[barcode] += 1
                         # do the annotation so that a read only gets counted to a TE if it does not hit a gene:
                         #for r in result:
                         #    print(r)
+
+                        # This will currently allow 1 read to be counted twice if each edge is inside a different feature.
+                        # Is that wrong, or a reasonable compromise?
+
                         types = set([i['type'] for i in result])
                         ensgs = set([i['ensg'] for i in result]) # only count 1 read to 1 gene
                         if 'protein_coding' in types or 'lincRNA' in types:
@@ -369,21 +376,18 @@ class measureTE:
         log.info('Densifying and saving "{0}"'.format(out_filename))
         log.info('Found {0:,} barcodes'.format(len(self.barcodes)))
 
+        barcodes_to_do = sorted(self.barcodes.items(), key=itemgetter(1), reverse=True)
         if len(self.barcodes) > maxcells: # Or dont bother doing
             # Work out the maxcells barcodes to save
             log.info('Keeping the best {0} barcodes'.format(maxcells))
-            barcode_column_scores = defaultdict(int)
-            for feature in result:
-                for barcode in self.barcodes: # see sc_parse_bamse()
-                    barcode_column_scores[barcode] += result[feature][barcode] # This explodes the result defaultdict to densify it.
-
-            barcodes_to_do = sorted(barcode_column_scores.items(), key=itemgetter(1), reverse=True)
             barcodes_to_do = [i[0] for i in barcodes_to_do][0:maxcells]
+        elif maxcells > len(self.barcodes):
+            log.warning('Asked for {0} maxcells, but only {1} barcodes found'.format(maxcells, len(self.barcodes)))
+            barcodes_to_do = [i[0] for i in barcodes_to_do]
         else:
-            barcodes_to_do = self.barcodes # see sc_parse_bamse()
+            barcodes_to_do = [i[0] for i in barcodes_to_do]
 
         oh = open(out_filename, 'w')
-
         oh.write('{0}\t{1}\n'.format('name', '\t'.join(result.keys())))
 
         for barcode in barcodes_to_do:
