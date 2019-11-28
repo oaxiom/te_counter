@@ -10,7 +10,7 @@ valid_assemblies = {'mm10', 'hg38'}
 valid_modes = {'genes_tes', 'enhancers'}
 
 from .. import common
-from .make import make_genes_tes, make_enh
+from .make import make_genes_tes, make_enh, make_custom
 
 def check_genome_available(genome, mode):
     """
@@ -20,8 +20,10 @@ def check_genome_available(genome, mode):
     **Returns**
         True of False
     """
-    assert genome in common.valid_assemblies, '{0} genome assembly not in the list of valid assemblies: {1}'.format(genome, common.valid_assemblies)
+
     assert mode in common.valid_modes, '{0} mode not in the list of valid modes: {1}'.format(mode, common.valid_modes)
+    if mode != 'custom':
+        assert genome in common.valid_assemblies, '{0} genome assembly not in the list of valid assemblies: {1}'.format(genome, common.valid_assemblies)
 
     script_path = os.path.dirname(os.path.realpath(__file__))
     filename = '{0}_{1}.glb'.format(genome, mode)

@@ -28,7 +28,7 @@ def prepare_parser():
     optional.add_argument('--sc', action='store_true', required=False, help='Set te_count to single-cell mode, default is bulk. Expects an CR:Z flag in the BAM/SAM file. Make sure you set --se appropriately')
     optional.add_argument('--noumi', action='store_true', required=False, help='If --sc is set, but this single cell data has no UMI in a UR:Z tag, set this switch')
     optional.add_argument('-q', '--qual', nargs=1, type=int, default=20, required=False, help='q threshold for qulait filtering, default=20')
-    optional.add_argument('--maxcells', nargs=1, type=int, default=10000, required=False, help='keep at most maxcells with the most reads, default=10000')
+    optional.add_argument('--maxcells', action='store', type=int, default=10000, required=False, help='keep at most maxcells with the most reads, default=10000')
 
     required = parser.add_argument_group('required arguments')
 
@@ -65,24 +65,32 @@ def main():
     log.info('  quality thresold: {0} (default is 20)'.format(args.qual))
     if args.sc:
         log.info('  single cell mode: {0} (default is False/Bulk)'.format(args.sc))
-        log.info('  maxcells: {0} (default is 10000)'.format(args.maxcells[0]))
+        log.info('  maxcells: {0} (default is 10000)'.format(args.maxcells))
         log.info('  No UMI: {0} (default is False)'.format(args.noumi))
 
-    log.info('Finding Genome')
-    genome = args.genome[0]
-    if not te_count.genome.check_genome_available(genome, args.mode[0]):
-        log.error('{0}/{1} genome not found, please run te_build'.format(genome, args.mode[0]))
-        te_count.common.print_genomes(log=log)
-        sys.exit()
-    log.info('Found Genome {0}/{1}'.format(genome, args.mode[0]))
-
     mte = te_count.measureTE(sys.argv[0], args.qual)
-    mte.bind_genome(os.path.join(script_path, '../te_count/genome/{0}_{1}.glb'.format(genome, args.mode[0])))
-    log.info('Found and loaded {0} genome {1}'.format(args.genome[0], args.mode[0]))
+
+    if args.mode[0] == 'custom':
+        if not os.path.exists(args.genome[0]): raise AssertionError('genome index not file found')
+        log.info('Loading {0} genome index'.format(args.genome[0]))
+
+        mte.bind_genome(args.genome[0])
+        log.info('Found and loaded {0} genome {1}'.format(args.genome[0], args.mode[0]))
+
+    else: # pre-exisiting genome
+        log.info('Finding Genome')
+        genome = args.genome[0]
+        if not te_count.genome.check_genome_available(genome, args.mode[0]):
+            log.error('{0}/{1} genome not found, please run te_build'.format(genome, args.mode[0]))
+            te_count.common.print_genomes(log=log)
+            sys.exit()
+        log.info('Found Genome {0}/{1}'.format(genome, args.mode[0]))
+        mte.bind_genome(os.path.join(script_path, '../te_count/genome/{0}_{1}.glb'.format(genome, args.mode[0])))
+        log.info('Found and loaded {0} genome {1}'.format(args.genome[0], args.mode[0]))
 
     if args.sc:
         result = mte.sc_parse_bamse(args.inbam[0], UMIS=not args.noumi, log=log)
-        mte.sc_save_result(result, args.outtsv[0], args.maxcells[0], log=log)
+        mte.sc_save_result(result, args.outtsv[0], args.maxcells, log=log)
     else:
         if args.se:
             result = mte.parse_bamse(args.inbam[0], log=log)

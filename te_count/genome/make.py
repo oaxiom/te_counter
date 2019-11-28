@@ -5,7 +5,11 @@ Build the combined gencode and repeat data for te_hic
 
 import sys, os
 
-def make_genes_tes(genome):
+gtf_format = {"feature_type": 1, "feature": 2, "gtf_decorators": 8, "commentlines": "#",
+        "loc": "location(chr=column[0], left=column[3], right=column[4])",
+        "strand": 6, "skiplines": -1, "force_tsv": True}
+
+def make_genes_tes(genome, log):
     from .. import miniglbase
 
     # We have to hardcode the gencode URL as it's location can change and the naming is irregular
@@ -18,10 +22,6 @@ def make_genes_tes(genome):
 
     repeat_name = '{0}_rmsk.txt.gz'.format(genome)
     final_name = '{0}_genes_tes.glb'.format(genome)
-
-    gtf_format = {"feature_type": 1, "feature": 2, "gtf_decorators": 8, "commentlines": "#",
-            "loc": "location(chr=column[0], left=column[3], right=column[4])",
-            "strand": 6, "skiplines": -1, "force_tsv": True}
 
     rmsk_track_form = {"force_tsv": True, 'loc': 'location(chr=column[5], left=column[6], right=column[7])',
         'repName': 10, 'repClass': 11, 'repFamily': 12}
@@ -103,7 +103,13 @@ def make_genes_tes(genome):
 
     return True
 
-def make_enh(genome):
+def make_enh(genome, log):
+    """
+    **Purpose**
+        make a genome from the enhancers
+
+    """
+
     from .. import miniglbase
     script_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -140,3 +146,57 @@ def make_enh(genome):
     gl = miniglbase.genelist()
     gl.load_list(newl)
     gl.save('{0}/{1}'.format(script_path, final_name))
+
+def make_custom(gtffilename, filename_for_index, log):
+    """
+    **Purpose*
+        make a custom genome assembly from gtffilename
+
+    """
+    from .. import miniglbase
+
+    chr_set = frozenset(['X', 'Y'] + ['%s' % i for i in range(1, 30)])
+
+    if '.gz' in gtffilename:
+        gtf = miniglbase.delayedlist(gtffilename, gzip=True, format=gtf_format)
+    else:
+        gtf = miniglbase.delayedlist(gtffilename, gzip=False, format=gtf_format)
+
+    # check that we have a 'ensg' key that we can use
+    log.info('Checking GTF format')
+    for idx, item in enumerate(gtf):
+        assert 'ensg' in item, 'the custom GTF must have an "ensg" key that is unique and can be used to score expression'
+        assert 'gene_type' in item, 'the custom GTF must have a "gene_type" key, which should be one of "protein_coding/lncRNA"'
+        assert 'gene_id' in item, 'the custom GTF must have a "gene_id" key, which should contain a unqie identifier for the gene'
+        if idx > 10: break # check the first 10 entries
+    gtf.reset()
+
+    added = 0
+    newl = []
+    log.info('Processing custom gtf {0}'.format(gtffilename))
+    p = miniglbase.progressbar(len(gtf))
+    for idx, item in enumerate(gtf):
+        if item['feature'] != 'exon': # i.e. only include in the annotation if it is an exon
+            continue
+
+        if item['loc']['chr'] not in chr_set:
+            continue
+
+        # need to deal with GTF keys intelligently...
+        newentry = {'loc': item['loc'],
+            'name': item['gene_name'],
+            'type': item['gene_type'],
+            'ensg': item['gene_id'],
+            }
+        newl.append(newentry)
+        added += 1
+
+        p.update(idx)
+
+    print('\nAdded {:,} features'.format(added))
+
+    gl = miniglbase.genelist()
+    gl.load_list(newl)
+    gl.save(filename_for_index)
+
+    return True

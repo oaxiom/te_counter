@@ -262,7 +262,7 @@ class _base_genelist:
                     d[key] = self._guessDataType(column[format[key]])
             elif key == "gtf_decorators": # special exceptions for gtf files
                 gtf = column[format["gtf_decorators"]].strip()
-                for item in gtf.split(";"):
+                for item in gtf.split("; "):
                     if item:
                         item = item.strip()
                         ss = shlexsplit(item)

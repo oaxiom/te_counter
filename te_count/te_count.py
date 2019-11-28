@@ -104,7 +104,7 @@ class measureTE:
                         #    print(r)
                         types = set([i['type'] for i in result])
                         ensgs = set([i['ensg'] for i in result]) # only count 1 read to 1 gene
-                        if 'protein_coding' in types or 'lincRNA' in types:
+                        if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
                             for e in ensgs:
                                 if ':' in ensgs: # A TE, skip it
                                     continue
@@ -193,7 +193,7 @@ class measureTE:
                         #    print(r)
                         types = set([i['type'] for i in result])
                         ensgs = set([i['ensg'] for i in result]) # only count 1 read to 1 gene
-                        if 'protein_coding' in types or 'lincRNA' in types:
+                        if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
                             for e in ensgs:
                                 if ':' in ensgs: # A TE, skip it
                                     continue
@@ -340,7 +340,7 @@ class measureTE:
 
                         types = set([i['type'] for i in result])
                         ensgs = set([i['ensg'] for i in result]) # only count 1 read to 1 gene
-                        if 'protein_coding' in types or 'lincRNA' in types:
+                        if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
                             for e in ensgs:
                                 if ':' in ensgs: # A TE, skip it
                                     continue
