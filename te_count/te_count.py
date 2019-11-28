@@ -284,7 +284,6 @@ class measureTE:
 
                 barcode = tags['CR']
 
-
                 if UMIS:
                     umi = '{0}-{1}'.format(tags['UR'], tags['CR']) # UMI should be unique for both
 
