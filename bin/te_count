@@ -29,6 +29,7 @@ def prepare_parser():
     optional.add_argument('--noumi', action='store_true', required=False, help='If --sc is set, but this single cell data has no UMI in a UR:Z tag, set this switch')
     optional.add_argument('-q', '--qual', nargs=1, type=int, default=20, required=False, help='q threshold for qulait filtering, default=20')
     optional.add_argument('--maxcells', action='store', type=int, default=10000, required=False, help='keep at most maxcells with the most reads, default=10000')
+    optional.add_argument('-w', action='store', type=str, default='', required=False, help='A whitelist of barcodes. Becomes a requried argument of --sc')
 
     required = parser.add_argument_group('required arguments')
 
@@ -56,6 +57,10 @@ def main():
 
     log = parser.log
 
+    if args.sc and not args.w:
+        log.error('-w no whitelist of barcodes supplied')
+        sys.exit(0)
+
     log.info('Arguments:')
     log.info('  inbam: %s' % args.inbam[0])
     log.info('  outtsv: %s' % args.outtsv[0])
@@ -67,6 +72,7 @@ def main():
         log.info('  single cell mode: {0} (default is False/Bulk)'.format(args.sc))
         log.info('  maxcells: {0} (default is 10000)'.format(args.maxcells))
         log.info('  No UMI: {0} (default is False)'.format(args.noumi))
+        log.info('  Whitelist: {0} (no default)'.format(args.w))
 
     mte = te_count.measureTE(sys.argv[0], args.qual)
 
@@ -89,8 +95,11 @@ def main():
         log.info('Found and loaded {0} genome {1}'.format(args.genome[0], args.mode[0]))
 
     if args.sc:
-        result = mte.sc_parse_bamse(args.inbam[0], UMIS=not args.noumi, log=log)
-        mte.sc_save_result(result, args.outtsv[0], args.maxcells, log=log)
+        if args.se:
+            result = mte.sc_parse_bamse(args.inbam[0], UMIS=not args.noumi, whitelistfileanem=args.w, log=log)
+            mte.sc_save_result(result, args.outtsv[0], args.maxcells, log=log)
+        else:
+            raise AssertionError('PE path for --sc is not implemented')
     else:
         if args.se:
             result = mte.parse_bamse(args.inbam[0], log=log)

@@ -237,7 +237,7 @@ class measureTE:
         oh.close()
         log.info('Saved {0}'.format(out_filename))
 
-    def sc_parse_bamse(self, filename, UMIS=True, whitelist=None, log=None):
+    def sc_parse_bamse(self, filename, UMIS=True, whitelistfileanem=None, log=None):
         '''
         **Purpose**
             Load in a BAMSE file, for single cell data, and look for the CR and UMI tags.
@@ -252,12 +252,25 @@ class measureTE:
             whitelist (Optional, perform
         '''
         assert filename, 'You must specify a filename'
+        assert whitelistfileanem, 'You must specify a filename for the barcode whitelist'
+
+        if not os.path.exists(whitelistfileanem):
+            raise AssertionError('{0} -w whitelist file not found'.format(whitelistfileanem))
+
+        whitelist = []
+        oh = open(whitelistfileanem)
+        for line in oh:
+            whitelist.append(line.strip())
+        oh.close()
+        whitelist = set(whitelist)
 
         final_results = {i: defaultdict(int) for i in self.all_feature_names} # pseudo-sparse array
         self.barcodes = {}
         umis = defaultdict(set)
         bucket_size = miniglbase.config.bucket_size
         read_assinged_to_gene = 0
+        valid_barcodes_reads = 0
+        invalid_barcode_reads = 0
         sam = pysam.AlignmentFile(filename, 'r')
         idx = 0
 
@@ -283,6 +296,10 @@ class measureTE:
                     continue
 
                 barcode = tags['CR']
+                if barcode not in whitelist:
+                    # TODO: 1 bp mismatch recovery
+                    invalid_barcode_reads += 1
+                    continue
 
                 if UMIS:
                     umi = '{0}-{1}'.format(tags['UR'], barcode) # UMI should be unique for both
@@ -359,8 +376,9 @@ class measureTE:
             pass # the last read
 
         sam.close()
-        log.info('Processed {:,} SE reads'.format(idx))
-        log.info('Assigned {:,} reads to genes'.format(read_assinged_to_gene))
+        log.info('Processed {0:,} SE reads'.format(idx))
+        log.info('Found {0:,} invalid barcode reads'.format(invalid_barcode_reads))
+        log.info('Assigned {0:,} ({1:.1f}%) reads to genes'.format(read_assinged_to_gene, (read_assinged_to_gene/idx * 100.0))) # add per cents here;
         self.total_reads = idx
 
         return final_results
@@ -392,6 +410,17 @@ class measureTE:
         else:
             barcodes_to_do = [i[0] for i in barcodes_to_do]
 
+        if '.tsv' not in out_filename:
+            out_filename = '{0}.tsv'.format(out_filename)
+        barcode_freq_filename = out_filename.replace('.tsv', '.barcode_freq.tsv')
+
+        oh = open(barcode_freq_filename, 'w')
+        for b in barcodes_to_do:
+            oh.write('{0}\t{1}\n'.format(b, self.barcodes[b]))
+        oh.close()
+
+        log.info('Saving barcode read frequency file to {0}'.format(barcode_freq_filename))
+
         oh = open(out_filename, 'w')
         oh.write('{0}\t{1}\n'.format('name', '\t'.join(result.keys())))
 
@@ -404,7 +433,6 @@ class measureTE:
                     counts.append(0)
             oh.write('{0}\n'.format('\t'.join([barcode] + [str(c) for c in counts])))
         oh.close()
-
 
 if __name__ == '__main__':
     try:
