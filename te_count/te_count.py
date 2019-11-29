@@ -257,7 +257,7 @@ class measureTE:
         self.barcodes = {}
         umis = defaultdict(set)
         bucket_size = miniglbase.config.bucket_size
-
+        read_assinged_to_gene = 0
         sam = pysam.AlignmentFile(filename, 'r')
         idx = 0
 
@@ -285,7 +285,9 @@ class measureTE:
                 barcode = tags['CR']
 
                 if UMIS:
-                    umi = '{0}-{1}'.format(tags['UR'], tags['CR']) # UMI should be unique for both
+                    umi = '{0}-{1}'.format(tags['UR'], barcode) # UMI should be unique for both
+                else:
+                    umi = barcode # putting this here like this will enforce a policy of 1 read per genomic-location-strand.
 
                 chrom = read.reference_name.replace('chr', '')
                 if chrom not in self.genome.buckets: # Must be a valid chromosome
@@ -297,7 +299,7 @@ class measureTE:
                 # Check we havne't seen this UMI/CB before:
                 if umi in umis: # umi/CB was seen
                     l = (chrom, left, right)
-                    if UMIS and l in umis[umi]: # check we haven't seen this
+                    if UMIS and l in umis[umi]: # check we haven't seen this exact fragment;
                         continue # We've seen this umi and loc before
                     umis[umi].add(l)
 
@@ -348,8 +350,9 @@ class measureTE:
                             for e in ensgs: # Not in any other mRNA, so okay to count as a TE
                                 final_results[e][barcode] += 1
                         elif 'enhancer' in types:
-                            for e in ensgs: # Not in any other mRNA, so okay to count as a TE
+                            for e in ensgs: # Not in any other mRNA, so okay to count as a enhancer
                                 final_results[e][barcode] += 1
+                        read_assinged_to_gene += 1
                         #print()
 
         except StopIteration:
@@ -357,6 +360,7 @@ class measureTE:
 
         sam.close()
         log.info('Processed {:,} SE reads'.format(idx))
+        log.info('Assigned {:,} reads to genes'.format(read_assinged_to_gene))
         self.total_reads = idx
 
         return final_results
@@ -372,16 +376,18 @@ class measureTE:
         '''
         assert out_filename, 'You must specify a filename'
 
+        import matplotlib.pyplot as plot
+
         log.info('Densifying and saving "{0}"'.format(out_filename))
         log.info('Found {0:,} barcodes'.format(len(self.barcodes)))
 
         barcodes_to_do = sorted(self.barcodes.items(), key=itemgetter(1), reverse=True)
         if len(self.barcodes) > maxcells: # Or dont bother doing
             # Work out the maxcells barcodes to save
-            log.info('Keeping the best {0} barcodes'.format(maxcells))
+            log.info('Keeping the best {0:,} barcodes'.format(maxcells))
             barcodes_to_do = [i[0] for i in barcodes_to_do][0:maxcells]
         elif maxcells > len(self.barcodes):
-            log.warning('Asked for {0} maxcells, but only {1} barcodes found'.format(maxcells, len(self.barcodes)))
+            log.warning('Asked for {0:,} maxcells, but only {1:,} barcodes found'.format(maxcells, len(self.barcodes)))
             barcodes_to_do = [i[0] for i in barcodes_to_do]
         else:
             barcodes_to_do = [i[0] for i in barcodes_to_do]
