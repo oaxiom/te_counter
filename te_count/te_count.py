@@ -394,7 +394,7 @@ class measureTE:
         '''
         assert out_filename, 'You must specify a filename'
 
-        import matplotlib.pyplot as plot
+        #import matplotlib.pyplot as plot
 
         log.info('Densifying and saving "{0}"'.format(out_filename))
         log.info('Found {0:,} barcodes'.format(len(self.barcodes)))
