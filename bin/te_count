@@ -26,9 +26,9 @@ def prepare_parser():
     optional.add_argument('--se', action='store_true', required=False, help='Set mode to SE (single-end) mode, default is paired-end mode')
     optional.add_argument('--sc', action='store_true', required=False, help='Set te_count to single-cell mode, default is bulk. Expects an CR:Z flag in the BAM/SAM file. Make sure you set --se appropriately')
     optional.add_argument('--noumi', action='store_true', required=False, help='If --sc is set, but this single cell data has no UMI in a UR:Z tag, set this switch')
-    optional.add_argument('--strand', action='store_true', required=False, help='Use the strand information for the reads (protocol is strand-specific) (Default=False)')
+    optional.add_argument('--strand', action='store_true', required=False, help='Use the strand information for the reads (protocol is strand-specific), default=False')
     optional.add_argument('-q', '--qual', nargs=1, type=int, default=20, required=False, help='q threshold for qulait filtering, default=20')
-    optional.add_argument('--maxcells', action='store', type=int, default=10000, required=False, help='keep at most maxcells with the most reads, default=10000')
+    optional.add_argument('--maxcells', action='store', type=int, default=10000, required=False, help='keep at most maxcells with the most reads, default=10,000')
     optional.add_argument('-w', action='store', type=str, default='', required=False, help='A whitelist of barcodes. Becomes a requried argument of --sc')
 
     required = parser.add_argument_group('required arguments')
