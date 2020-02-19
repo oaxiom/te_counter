@@ -31,7 +31,7 @@ class measureTE:
         self.genome = miniglbase.glload(genelist_glb_filename)
         self.all_feature_names = sorted(list(set(self.genome['ensg'])))
 
-    def parse_bampe(self, filename, log=None):
+    def parse_bampe(self, filename, strand=False, log=None):
         '''
         **Purpose**
             Load in a BAMPE file
@@ -41,6 +41,9 @@ class measureTE:
                 filename of the BAMPE file
         '''
         assert filename, 'You must specify a filename'
+
+        if strand:
+            raise NotImplementedError()
 
         final_results = {i: 0 for i in self.all_feature_names}
 
@@ -128,7 +131,7 @@ class measureTE:
 
         return final_results
 
-    def parse_bamse(self, filename, log=None):
+    def parse_bamse(self, filename, strand=False, log=None):
         '''
         **Purpose**
             Load in a BAMSE file
@@ -138,6 +141,9 @@ class measureTE:
                 filename of the BAMSE file
         '''
         assert filename, 'You must specify a filename'
+
+        if strand:
+            raise NotImplementedError()
 
         final_results = {i: 0 for i in self.all_feature_names}
 
@@ -237,7 +243,7 @@ class measureTE:
         oh.close()
         log.info('Saved {0}'.format(out_filename))
 
-    def sc_parse_bamse(self, filename, UMIS=True, whitelistfileanem=None, log=None):
+    def sc_parse_bamse(self, filename, UMIS=True, whitelistfileanem=None, strand=False, log=None):
         '''
         **Purpose**
             Load in a BAMSE file, for single cell data, and look for the CR and UMI tags.
@@ -249,7 +255,9 @@ class measureTE:
             UMIS (OPtional, default=True)
                 Wheter to get the UMIs out of UR tag
 
-            whitelist (Optional, perform
+            whitelist (Required)
+                perform whitlisting on the barcodes;
+
         '''
         assert filename, 'You must specify a filename'
         assert whitelistfileanem, 'You must specify a filename for the barcode whitelist'
@@ -312,6 +320,7 @@ class measureTE:
 
                 left = read.reference_start
                 rite = read.reference_end
+                loc_strand = '-' if read.is_reverse else '+'
 
                 # Check we havne't seen this UMI/CB before:
                 if umi in umis: # umi/CB was seen
@@ -337,6 +346,12 @@ class measureTE:
                             loc_ids.update(self.genome.buckets[chrom][buck]) # set = unique ids
 
                     for index in loc_ids:
+                        # check strands
+
+                        if strand:
+                            if loc_strand != self.genome.linearData[index]["strand"]:
+                                continue
+
                         #print loc.qcollide(self.linearData[index]["loc"]), loc, self.linearData[index]["loc"]
                         if loc1.qcollide(self.genome.linearData[index]["loc"]): # Any 1 bp overlap...
                             result.append(self.genome.linearData[index])

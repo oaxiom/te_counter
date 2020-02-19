@@ -9,6 +9,9 @@ gtf_format = {"feature_type": 1, "feature": 2, "gtf_decorators": 8, "commentline
         "loc": "location(chr=column[0], left=column[3], right=column[4])",
         "strand": 6, "skiplines": -1, "force_tsv": True}
 
+rmsk_track_form = {"force_tsv": True, 'loc': 'location(chr=column[5], left=column[6], right=column[7])',
+    'strand': 9, 'repName': 10, 'repClass': 11, 'repFamily': 12}
+
 def make_genes_tes(genome, log):
     from .. import miniglbase
 
@@ -22,9 +25,6 @@ def make_genes_tes(genome, log):
 
     repeat_name = '{0}_rmsk.txt.gz'.format(genome)
     final_name = '{0}_genes_tes.glb'.format(genome)
-
-    rmsk_track_form = {"force_tsv": True, 'loc': 'location(chr=column[5], left=column[6], right=column[7])',
-        'repName': 10, 'repClass': 11, 'repFamily': 12}
 
     script_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -59,6 +59,7 @@ def make_genes_tes(genome, log):
             continue
 
         newentry = {'loc': item['loc'],
+            'strand': item['strand'],
             'name': '%s:%s:%s' % (item['repName'], item['repFamily'], item['repClass']),
             'type': 'TE',
             'ensg': '%s:%s:%s' % (item['repName'], item['repFamily'], item['repClass'])
@@ -83,6 +84,7 @@ def make_genes_tes(genome, log):
             continue
 
         newentry = {'loc': item['loc'],
+            'strand': item['strand'],
             'name': item['gene_name'],
             'type': item['gene_type'],
             'ensg': item['gene_id'].split('.')[0],
@@ -184,6 +186,7 @@ def make_custom(gtffilename, filename_for_index, log):
 
         # need to deal with GTF keys intelligently...
         newentry = {'loc': item['loc'],
+            'strand': item['strand'],
             'name': item['gene_name'],
             'type': item['gene_type'],
             'ensg': item['gene_id'],
