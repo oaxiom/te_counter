@@ -22,12 +22,11 @@ def prepare_parser():
 
     optional = parser._action_groups.pop()
     optional.add_argument('--gtf', nargs=1, required=False, help='if mode=custom, a gtf file to get the annotations from')
+    optional.add_argument('-f', action='store_true', required=False, required=False, help='Force a rebuild, even if the genome is already present')
 
     required = parser.add_argument_group('required arguments')
     required.add_argument('-m', '--mode', nargs=1, required=True, help='Type of annotation to use, valid modes: {0}'.format(te_count.common.valid_modes))
     required.add_argument('-g', '--genome', nargs=1, required=True, help='Genome assembly to use, valid genomes: {0}'.format(te_count.common.valid_assemblies))
-
-
 
     logging.basicConfig(level=logging.DEBUG,
                     format='%(levelname)-8s: %(message)s',
@@ -56,7 +55,7 @@ def main():
 
         if not os.path.exists(args.gtf[0]):
             raise AssertionError('--gtf file not found')
-        log.info('Using {0} as the genome name'.format(args.genome[0]))
+        log.info('Using {} as the genome name'.format(args.genome[0]))
 
         idx = te_count.te_genome.index()
         idx.build_index(args.genome[0], 'custom', log, args.gtf[0])
@@ -66,10 +65,11 @@ def main():
         genome = args.genome[0]
 
         filename = te_count.genome.check_genome_available(genome, args.mode[0])
-        if filename:
-            log.error('{0}/{1} genome already built "{2}"'.format(genome, args.mode[0], filename))
+        if filename and not args.f:
+            log.error('{}/{} genome already built "{}"'.format(genome, args.mode[0], filename))
             sys.exit()
-        log.info('{0}/{1} genome not found, building'.format(genome, args.mode[0]))
+
+        log.info('{}/{} genome not found, building'.format(genome, args.mode[0]))
 
         idx = te_count.te_genome.index()
         idx.build_index(genome, args.mode[0], log)
