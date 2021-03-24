@@ -73,6 +73,7 @@ def make_genes_tes(genome, log):
     print('\nAdded {:,} features'.format(added))
 
     print('Adding Gencode exons')
+    added = 0
     p = miniglbase.progressbar(len(gencode))
     for idx, item in enumerate(gencode):
         if item['feature'] != 'exon': # i.e. only include in the annotation if it is an exon
