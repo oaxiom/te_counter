@@ -253,7 +253,7 @@ class measureTE:
                 filename of the BAMSE file
 
             UMIS (OPtional, default=True)
-                Wheter to get the UMIs out of UR tag
+                Whether to get the UMIs out of UR tag
 
             whitelist (Required)
                 perform whitlisting on the barcodes;

@@ -70,8 +70,8 @@ def make_genes_tes(genome, log):
         added += 1
 
         p.update(idx)
-
     print('\nAdded {:,} features'.format(added))
+
     print('Adding Gencode exons')
     p = miniglbase.progressbar(len(gencode))
     for idx, item in enumerate(gencode):
@@ -79,6 +79,9 @@ def make_genes_tes(genome, log):
             continue
 
         if item['gene_type'] not in ('protein_coding', 'lncRNA'):
+            continue
+
+        if item['transcript_type'] not in ('protein_coding', 'lncRNA'):
             continue
 
         if item['loc']['chr'] not in chr_set:
