@@ -22,7 +22,7 @@ def prepare_parser():
 
     optional = parser._action_groups.pop()
     optional.add_argument('--gtf', nargs=1, required=False, help='if mode=custom, a gtf file to get the annotations from')
-    optional.add_argument('-f', action='store_true', required=False, required=False, help='Force a rebuild, even if the genome is already present')
+    optional.add_argument('-f', action='store_true', required=False, help='Force a rebuild, even if the genome is already present')
 
     required = parser.add_argument_group('required arguments')
     required.add_argument('-m', '--mode', nargs=1, required=True, help='Type of annotation to use, valid modes: {0}'.format(te_count.common.valid_modes))
