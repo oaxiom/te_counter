@@ -61,9 +61,9 @@ def make_genes_tes(genome, log):
 
         newentry = {'loc': item['loc'],
             'strand': item['strand'],
-            'name': '%s:%s:%s' % (item['repName'], item['repFamily'], item['repClass']),
+            'name': '%s:%s:%s' % (item['repClass'], item['repFamily'], item['repName']),
             'type': 'TE',
-            'ensg': '%s:%s:%s' % (item['repName'], item['repFamily'], item['repClass'])
+            'ensg': '%s:%s:%s' % (item['repClass'], item['repFamily'], item['repName'])
             }
         newl.append(newentry)
         #print(newentry)
