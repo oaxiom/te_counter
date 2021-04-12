@@ -18,8 +18,8 @@ def open_mat(filename):
 
     return np
 
-obs = open_mat('single_cell_out.tsv')
-exp = open_mat('single_cell_out-expected.tsv')
+obs = open_mat('run_results/single_cell_out.tsv')
+exp = open_mat('run_results/single_cell_out-expected.tsv')
 
 fig = plot.figure()
 ax = fig.add_subplot(111)
@@ -29,8 +29,8 @@ for p1, p2 in zip(obs, exp):
 
 fig.savefig('single_cell_out-plot.pdf')
 
-obs = open_mat('single_cell_strand_out.tsv')
-exp = open_mat('single_cell_strand_out-expected.tsv')
+obs = open_mat('run_results/single_cell_strand_out.tsv')
+exp = open_mat('run_results/single_cell_strand_out-expected.tsv')
 
 fig = plot.figure()
 ax = fig.add_subplot(111)
