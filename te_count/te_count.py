@@ -272,7 +272,7 @@ class measureTE:
         oh.close()
         whitelist = set(whitelist)
 
-        final_results = {i: defaultdict(int) for i in self.all_feature_names} # pseudo-sparse array
+        final_results = {i: {} for i in self.all_feature_names} # pseudo-sparse array
         self.barcodes = {}
         umis = defaultdict(set)
         bucket_size = miniglbase.config.bucket_size
@@ -281,6 +281,8 @@ class measureTE:
         invalid_barcode_reads = 0
         sam = pysam.AlignmentFile(filename, 'r')
         idx = 0
+
+        self_genome_linearData = self.genome.linearData
 
         try:
             while 1:
@@ -324,8 +326,8 @@ class measureTE:
 
                 # Check we havne't seen this UMI/CB before:
                 if umi in umis: # umi/CB was seen
-                    l = (chrom, left, right)
-                    if UMIS and l in umis[umi]: # check we haven't seen this exact fragment;
+                    l = (chrom, left, loc_strand)
+                    if UMIS and l in umis[umi]: # check we haven't seen this fragment;
                         continue # We've seen this umi and loc before
                     umis[umi].add(l)
 
@@ -353,11 +355,16 @@ class measureTE:
                                 continue
 
                         #print loc.qcollide(self.linearData[index]["loc"]), loc, self.linearData[index]["loc"]
-                        if loc1.qcollide(self.genome.linearData[index]["loc"]): # Any 1 bp overlap...
-                            result.append(self.genome.linearData[index])
+                        #if loc1.qcollide(self.genome.linearData[index]["loc"]): # Any 1 bp overlap...
+                        #    result.append(self.genome.linearData[index])
 
-                        if loc2.qcollide(self.genome.linearData[index]["loc"]): # Any 1 bp overlap...
-                            result.append(self.genome.linearData[index])
+                        locG = self_genome_linearData[index]["loc"]
+
+                        if loc1["right"] >= locG["left"] and loc1["left"] <= locG["right"]:
+                            result.append(self_genome_linearData[index])
+
+                        if loc2["right"] >= locG["left"] and loc2["left"] <= locG["right"]: # Any 1 bp overlap...
+                            result.append(self_genome_linearData[index])
 
                     if result:
                         # We are going to add to something:
@@ -365,9 +372,6 @@ class measureTE:
                             self.barcodes[barcode] = 0
                         self.barcodes[barcode] += 1
                         # do the annotation so that a read only gets counted to a TE if it does not hit a gene:
-                        #for r in result:
-                        #    print(r)
-
                         # This will currently allow 1 read to be counted twice if each edge is inside a different feature.
                         # Is that wrong, or a reasonable compromise?
 
@@ -377,13 +381,19 @@ class measureTE:
                             for e in ensgs:
                                 if ':' in ensgs: # A TE, skip it
                                     continue
-                                final_results[e][barcode] += 1
+                                if barcode not in final_results[e]:
+                                    final_results[e][barcode] = set([])
+                                final_results[e][barcode].add(umi)
                         elif 'TE' in types:
                             for e in ensgs: # Not in any other mRNA, so okay to count as a TE
-                                final_results[e][barcode] += 1
+                                if barcode not in final_results[e]:
+                                    final_results[e][barcode] = set([])
+                                final_results[e][barcode].add(umi)
                         elif 'enhancer' in types:
                             for e in ensgs: # Not in any other mRNA, so okay to count as a enhancer
-                                final_results[e][barcode] += 1
+                                if barcode not in final_results[e]:
+                                    final_results[e][barcode] = set([])
+                                final_results[e][barcode].add(umi)
                         read_assinged_to_gene += 1
                         #print()
 
@@ -391,9 +401,9 @@ class measureTE:
             pass # the last read
 
         sam.close()
-        log.info('Processed {0:,} SE reads'.format(idx))
-        log.info('Found {0:,} invalid barcode reads'.format(invalid_barcode_reads))
-        log.info('Assigned {0:,} ({1:.1f}%) reads to genes'.format(read_assinged_to_gene, (read_assinged_to_gene/idx * 100.0))) # add per cents here;
+        log.info('Processed {:,} SE reads'.format(idx))
+        log.info('Found {:,} invalid barcode reads'.format(invalid_barcode_reads))
+        log.info('Assigned {:,} ({:.1f}%) reads to features'.format(read_assinged_to_gene, (read_assinged_to_gene/idx * 100.0))) # add per cents here;
         self.total_reads = idx
 
         return final_results
@@ -443,7 +453,7 @@ class measureTE:
             counts = []
             for feature in result:
                 if barcode in result[feature]: # Stop defaultdict from densifying
-                    counts.append(result[feature][barcode])
+                    counts.append(len(result[feature][barcode]))
                 else:
                     counts.append(0)
             oh.write('{0}\n'.format('\t'.join([barcode] + [str(c) for c in counts])))
