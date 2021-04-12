@@ -243,7 +243,7 @@ class measureTE:
         oh.close()
         log.info('Saved {0}'.format(out_filename))
 
-    def sc_parse_bamse(self, filename, UMIS=True, whitelistfileanem=None, strand=False, log=None):
+    def sc_parse_bamse(self, filename, UMIS=True, whitelistfilename=None, strand=False, log=None):
         '''
         **Purpose**
             Load in a BAMSE file, for single cell data, and look for the CR and UMI tags.
@@ -260,17 +260,17 @@ class measureTE:
 
         '''
         assert filename, 'You must specify a filename'
-        assert whitelistfileanem, 'You must specify a filename for the barcode whitelist'
 
-        if not os.path.exists(whitelistfileanem):
-            raise AssertionError('{0} -w whitelist file not found'.format(whitelistfileanem))
-
-        whitelist = []
-        oh = open(whitelistfileanem)
-        for line in oh:
-            whitelist.append(line.strip())
-        oh.close()
-        whitelist = set(whitelist)
+        whitelist = None
+        if whitelistfilename:
+            if not os.path.exists(whitelistfilename):
+                raise AssertionError('{0} -w whitelist file not found'.format(whitelistfilename))
+            whitelist = []
+            oh = open(whitelistfilename)
+            for line in oh:
+                whitelist.append(line.strip())
+            oh.close()
+            whitelist = set(whitelist)
 
         final_results = {i: {} for i in self.all_feature_names} # pseudo-sparse array
         self.barcodes = {}
@@ -306,7 +306,7 @@ class measureTE:
                     continue
 
                 barcode = tags['CR']
-                if barcode not in whitelist:
+                if whitelist and barcode not in whitelist:
                     # TODO: 1 bp mismatch recovery
                     invalid_barcode_reads += 1
                     continue
@@ -326,7 +326,11 @@ class measureTE:
 
                 # Check we havne't seen this UMI/CB before:
                 if umi in umis: # umi/CB was seen
-                    l = (chrom, left, loc_strand)
+                    if strand:
+                        l = (chrom, left, loc_strand)
+                    else:
+                        l = (chrom, left)
+
                     if UMIS and l in umis[umi]: # check we haven't seen this fragment;
                         continue # We've seen this umi and loc before
                     umis[umi].add(l)
@@ -350,7 +354,7 @@ class measureTE:
                     for index in loc_ids:
                         # check strands
 
-                        if strand:
+                        if strand: # Only collect results on the same strand
                             if loc_strand != self.genome.linearData[index]["strand"]:
                                 continue
 

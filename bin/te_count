@@ -58,8 +58,7 @@ def main():
     log = parser.log
 
     if args.sc and not args.w:
-        log.error('-w no whitelist of barcodes supplied')
-        sys.exit(0)
+        log.warning('-w no whitelist of barcodes supplied')
 
     log.info('Arguments:')
     log.info('  inbam: %s' % args.inbam[0])
@@ -88,16 +87,16 @@ def main():
         log.info('Finding Genome')
         genome = args.genome[0]
         if not te_count.genome.check_genome_available(genome, args.mode[0]):
-            log.error('{0}/{1} genome not found, please run te_genome'.format(genome, args.mode[0]))
+            log.error('{}/{} genome not found, please run te_genome'.format(genome, args.mode[0]))
             te_count.common.print_genomes(log=log)
             sys.exit()
-        log.info('Found Genome {0}/{1}'.format(genome, args.mode[0]))
-        mte.bind_genome(os.path.join(script_path, '../te_count/genome/{0}_{1}.glb'.format(genome, args.mode[0])))
-        log.info('Found and loaded {0} genome {1}'.format(args.genome[0], args.mode[0]))
+        log.info('Found Genome {}/{}'.format(genome, args.mode[0]))
+        mte.bind_genome(os.path.join(script_path, '../te_count/genome/{}_{}.glb'.format(genome, args.mode[0])))
+        log.info('Found and loaded {} genome {}'.format(args.genome[0], args.mode[0]))
 
     if args.sc:
         if args.se:
-            result = mte.sc_parse_bamse(args.inbam[0], UMIS=not args.noumi, whitelistfileanem=args.w, strand=args.strand, log=log)
+            result = mte.sc_parse_bamse(args.inbam[0], UMIS=not args.noumi, whitelistfilename=args.w, strand=args.strand, log=log)
             mte.sc_save_result(result, args.outtsv[0], args.maxcells, log=log)
         else:
             raise AssertionError('PE path for --sc is not implemented')
