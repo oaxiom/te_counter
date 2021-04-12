@@ -314,7 +314,8 @@ class measureTE:
                 if UMIS:
                     umi = '{0}-{1}'.format(tags['UR'], barcode) # UMI should be unique for both
                 else:
-                    umi = barcode # putting this here like this will enforce a policy of 1 read per genomic-location-strand.
+                    umi = None # putting this here like this will ignore umis, and count all reads
+                    # i.e. typical RNA-seq policy.
 
                 chrom = read.reference_name.replace('chr', '')
                 if chrom not in self.genome.buckets: # Must be a valid chromosome
@@ -325,7 +326,10 @@ class measureTE:
                 loc_strand = '-' if read.is_reverse else '+'
 
                 # Check we havne't seen this UMI/CB before:
-                if umi in umis: # umi/CB was seen
+                if not umi:
+                    pass # Just skip;
+
+                elif umi in umis: # umi/CB was seen
                     if strand:
                         l = (chrom, left, loc_strand)
                     else:

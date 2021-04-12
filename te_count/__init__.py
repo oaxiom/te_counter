@@ -1,6 +1,6 @@
 '''
 
-Package for te_count code
+Package for te_count code imports
 
 '''
 
