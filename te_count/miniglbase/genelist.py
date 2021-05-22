@@ -354,7 +354,7 @@ class genelist(_base_genelist):
             self.buckets = {}
             for n, item in enumerate(self.linearData): # build the chromosome quick search maps.
                 chr = item[loc_key]["chr"]
-                if not chr in self.dataByChr:
+                if chr not in self.dataByChr:
                     self.dataByChr[chr] = []
                     self.dataByChrIndexLookBack[chr] = []
                 self.dataByChr[chr].append(item)
@@ -364,7 +364,7 @@ class genelist(_base_genelist):
                 # dataByChr data It is not documented for a reason!
                 # New bucket system to go in here.
 
-                if not chr in self.buckets:
+                if chr not in self.buckets:
                     self.buckets[chr] = {}
                 # work out the bucket(s) for the location.
                 # which bucket is left and right in?
@@ -375,18 +375,18 @@ class genelist(_base_genelist):
                 #print n, item[loc_key], buckets_reqd, left_buck, right_buck, len(buckets_reqd)
 
                 for b in buckets_reqd:
-                    if not b in self.buckets[chr]:
+                    if b not in self.buckets[chr]:
                         self.buckets[chr][b] = []
                     self.buckets[chr][b].append(n) # use index to maintain uniqueness.
 
         self.qkeyfind = {}
         for index, item in enumerate(self.linearData):
             for key in item:
-                if not key in self.qkeyfind:
+                if key not in self.qkeyfind:
                     self.qkeyfind[key] = {}
 
                 try:
-                    if not item[key] in self.qkeyfind[key]:
+                    if item[key] not in self.qkeyfind[key]:
                         self.qkeyfind[key][item[key]] = []
                     self.qkeyfind[key][item[key]].append(index)
                 except TypeError:
@@ -399,13 +399,9 @@ class genelist(_base_genelist):
         """
         you must check me before trying to access dataByChr[]
         """
-        if chromosome in self.dataByChr:
-            return(True)
-        else:
-            return(False)
-        return(False)
+        return chromosome in self.dataByChr
 
-    def _findDataByKeyLazy(self, key, value): # override????? surely find?
+    def _findDataByKeyLazy(self, key, value):    # override????? surely find?
         """
         (Internal)
 
@@ -413,20 +409,18 @@ class genelist(_base_genelist):
 
         This version is lazy, so I take the min() and return that item
         """
-        if key in self.qkeyfind:
-            if value in self.qkeyfind[key]:
-                return self.linearData[min(self.qkeyfind[key][value])]
+        if key in self.qkeyfind and value in self.qkeyfind[key]:
+            return self.linearData[min(self.qkeyfind[key][value])]
         return None # not found;
 
-    def _findDataByKeyGreedy(self, key, value): # override????? surely finditer?
+    def _findDataByKeyGreedy(self, key, value):    # override????? surely finditer?
         """
         finds all - returns a list
         """
         ret = []
         item_indeces = None
-        if key in self.qkeyfind:
-            if value in self.qkeyfind[key]:
-                item_indeces = self.qkeyfind[key][value]
+        if key in self.qkeyfind and value in self.qkeyfind[key]:
+            item_indeces = self.qkeyfind[key][value]
 
         if item_indeces:
             return([self.linearData[i] for i in item_indeces])
@@ -576,41 +570,40 @@ class genelist(_base_genelist):
         """
         assert filename, "No filename specified"
 
-        oh = open(filename, "w")
-        if not self.linearData: # data is empty, fail graciously.
-            config.log.error("csv file '%s' is empty, no file written" % filename)
-            oh.close()
-            return(None)
+        with open(filename, "w") as oh:
+            if not self.linearData: # data is empty, fail graciously.
+                config.log.error("csv file '%s' is empty, no file written" % filename)
+                oh.close()
+                return(None)
 
-        if "tsv" in kargs and kargs["tsv"]:
-            writer = csv.writer(oh, dialect=csv.excel_tab)
-        else:
-            writer = csv.writer(oh)
+            if "tsv" in kargs and kargs["tsv"]:
+                writer = csv.writer(oh, dialect=csv.excel_tab)
+            else:
+                writer = csv.writer(oh)
 
-        # work out key order and the like:
-        write_keys = []
-        if "key_order" in kargs:
-            write_keys = kargs["key_order"]
-            # now add in any missing keys to the right side of the list:
-            for item in list(self.keys()):
-                if item not in write_keys:
-                    write_keys.append(item)
-        else:
-            # just selece them all:
-            write_keys = list(self.keys())
+            # work out key order and the like:
+            write_keys = []
+            if "key_order" in kargs:
+                write_keys = kargs["key_order"]
+                # now add in any missing keys to the right side of the list:
+                for item in list(self.keys()):
+                    if item not in write_keys:
+                        write_keys.append(item)
+            else:
+                # just selece them all:
+                write_keys = list(self.keys())
 
-        if not no_header:
-            writer.writerow(write_keys) # write the header row.
+            if not no_header:
+                writer.writerow(write_keys) # write the header row.
 
-        for data in self.linearData:
-            line = []
-            for key in write_keys: # this preserves the order of the dict.
-                if key in data:
-                    line.append(data[key])
-                else:
-                    line.append("") # a blank key, fail gracefully.
-            writer.writerow(line)
-        oh.close()
+            for data in self.linearData:
+                line = []
+                for key in write_keys: # this preserves the order of the dict.
+                    if key in data:
+                        line.append(data[key])
+                    else:
+                        line.append("") # a blank key, fail gracefully.
+                writer.writerow(line)
         config.log.info("Saved '%s'" % filename)
         return(None)
 
@@ -668,38 +661,24 @@ class genelist(_base_genelist):
         **Returns**
             A saved bed file and None
         """
-        oh = open(filename, "w")
-
-        for index, item in enumerate(self.linearData):
-            todo = ["chr%s" % str(item["loc"]["chr"]), str(item["loc"]["left"]), str(item["loc"]["right"])]
-            if not loc_only:
-                if uniqueID:
-                    if id:
-                        todo += ["%s-%s" % (str(item[id]), index)]
+        with open(filename, "w") as oh:
+            for index, item in enumerate(self.linearData):
+                todo = ["chr%s" % str(item["loc"]["chr"]), str(item["loc"]["left"]), str(item["loc"]["right"])]
+                if not loc_only:
+                    if uniqueID:
+                        if id:
+                            todo += ["%s-%s" % (str(item[id]), index)]
+                        else:
+                            todo += ["%s-%s" % (self.name, index)]
                     else:
-                        todo += ["%s-%s" % (self.name, index)]
-                else:
-                    if id:
-                        todo += [str(item[id])]
-                    else:
-                        todo += ["0"]
+                        todo += [str(item[id])] if id else ["0"]
+                    todo += [str(item[score])] if score else ["0"]
+                    todo += [str(item["strand"])] if "strand" in item else ["+"]
+                if extra_keys:
+                    todo += [str(item[k]) for k in extra_keys]
 
-                if score:
-                    todo += [str(item[score])]
-                else:
-                    todo += ["0"]
+                oh.write("%s\n" % ("\t".join(todo)))
 
-                if "strand" in item:
-                    todo += [str(item["strand"])]
-                else:
-                    todo += ["+"]
-
-            if extra_keys:
-                todo += [str(item[k]) for k in extra_keys]
-
-            oh.write("%s\n" % ("\t".join(todo)))
-
-        oh.close()
         config.log.info("Saved '%s' BED file" % filename)
         return(filename)
 
@@ -768,9 +747,7 @@ class genelist(_base_genelist):
         if not self.linearData:
             return(False)
 
-        if item in self.linearData[0]:
-            return(True)
-        return(False)
+        return item in self.linearData[0]
 
     def __repr__(self):
         """
@@ -1299,9 +1276,11 @@ class genelist(_base_genelist):
                     loc_ids = set()
                     if buckets_reqd:
                         for buck in buckets_reqd:
-                            if locA["chr"] in self.buckets:
-                                if buck in self.buckets[locA["chr"]]:
-                                    loc_ids.update(self.buckets[locA["chr"]][buck]) # set = unique ids
+                            if (
+                                locA["chr"] in self.buckets
+                                and buck in self.buckets[locA["chr"]]
+                            ):
+                                loc_ids.update(self.buckets[locA["chr"]][buck]) # set = unique ids
                     # loc_ids now contains all of the indeces of the items in linearData that need checking
 
                     for indexB in loc_ids:
@@ -1341,9 +1320,11 @@ class genelist(_base_genelist):
                     loc_ids = set()
                     if buckets_reqd:
                         for buck in buckets_reqd:
-                            if locA["chr"] in self.buckets:
-                                if buck in self.buckets[locA["chr"]]:
-                                    loc_ids.update(self.buckets[locA["chr"]][buck]) # set = unique ids
+                            if (
+                                locA["chr"] in self.buckets
+                                and buck in self.buckets[locA["chr"]]
+                            ):
+                                loc_ids.update(self.buckets[locA["chr"]][buck]) # set = unique ids
                     # loc_ids now contains all of the indeces of the items in linearData that need checking
 
                     for indexB in loc_ids:
@@ -1435,7 +1416,7 @@ class genelist(_base_genelist):
         kord = list(self.linearData[0].keys())# fix the key order
 
         for item in self.linearData:
-            valstr = "".join([str(item[k]) for k in kord])
+            valstr = "".join(str(item[k]) for k in kord)
             if valstr not in unq:
                 unq.add(valstr)
                 newl.linearData.append(item) # add first item found

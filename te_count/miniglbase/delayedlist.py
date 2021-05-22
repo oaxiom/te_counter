@@ -94,18 +94,15 @@ class delayedlist(genelist):
     def __len__(self):
         # I need to collect an estimate
         if not self.__len_estimate:
+            lines = 0
             if not self.gzip:
                 f = open(self.fullpath, 'rb')
-                lines = 0
-                for line in f: lines += 1
-
-                self.__len_estimate = lines-1 # start from 0
+                for _ in f: lines += 1
 
             else: # gzipped file variant
                 f = gzip.open(self.fullpath, 'rb') # must be rb :(
-                lines = 0
-                for line in f.readlines(): lines += 1
-                self.__len_estimate = lines-1 # start from 0
+                for _ in f.readlines(): lines += 1
+            self.__len_estimate = lines-1 # start from 0
 
         return(self.__len_estimate)
 
@@ -120,7 +117,6 @@ class delayedlist(genelist):
         """
         self._optimiseData()
         return(next(self.__iter__()))
-        self._optimiseData()
 
     def __iter__(self):
         """

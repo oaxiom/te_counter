@@ -5,14 +5,12 @@ import matplotlib.pyplot as plot
 def open_mat(filename):
     tab = []
 
-    oh = open(filename, 'rt')
-    for line in oh:
-        if 'name' in line:
-            continue
-        t = [int(i) for i in line.strip().split('\t')[1:]]
-        tab.append(t)
-    oh.close()
-
+    with open(filename, 'rt') as oh:
+        for line in oh:
+            if 'name' in line:
+                continue
+            t = [int(i) for i in line.strip().split('\t')[1:]]
+            tab.append(t)
     np = numpy.array(tab)
     np = np.T
 
