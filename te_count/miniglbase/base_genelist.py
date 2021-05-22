@@ -104,8 +104,7 @@ class _base_genelist:
         (Override)
         make the geneList behave like a normal iterator (list)
         """
-        for n in self.linearData:
-            yield n
+        yield from self.linearData
 
     def __getitem__(self, index):
         """
@@ -306,13 +305,10 @@ class _base_genelist:
         """
         assert filename, "no filename specified"
 
-        oh = open(filename, "wb")
-        if compressed:
-            config.log.warning("compression not currently implemented, saving anyway")
+        with open(filename, "wb") as oh:
+            if compressed:
+                config.log.warning("compression not currently implemented, saving anyway")
             pickle.dump(self, oh, -1)
-        else:
-            pickle.dump(self, oh, -1)
-        oh.close()
         config.log.info("Saved binary version of list: '%s'" % filename)
 
     def from_pandas(self, pandas_data_frame):
@@ -340,9 +336,7 @@ class _base_genelist:
         newl = []
         key_names = pandas_data_frame.columns
         for index, row in pandas_data_frame.iterrows():
-            newitem = {}
-            for k, item in zip(key_names, row):
-                newitem[k] = item
+            newitem = {k: item for k, item in zip(key_names, row)}
             newl.append(newitem)
         self.linearData = newl
         self._optimiseData()

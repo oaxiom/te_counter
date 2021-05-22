@@ -95,11 +95,10 @@ def main():
         log.info('Found and loaded {} genome {}'.format(args.genome[0], args.mode[0]))
 
     if args.sc:
-        if args.se:
-            result = mte.sc_parse_bamse(args.inbam[0], UMIS=not args.noumi, whitelistfilename=args.w, strand=args.strand, log=log)
-            mte.sc_save_result(result, args.outtsv[0], args.maxcells, log=log)
-        else:
+        if not args.se:
             raise AssertionError('PE path for --sc is not implemented')
+        result = mte.sc_parse_bamse(args.inbam[0], UMIS=not args.noumi, whitelistfilename=args.w, strand=args.strand, log=log)
+        mte.sc_save_result(result, args.outtsv[0], args.maxcells, log=log)
     else:
         if args.se:
             result = mte.parse_bamse(args.inbam[0], strand=args.strand, log=log)

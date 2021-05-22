@@ -29,6 +29,4 @@ def check_genome_available(genome, mode):
     filename = '{0}_{1}.glb'.format(genome, mode)
 
     # Check the filename is here:
-    if os.path.exists(os.path.join(script_path, filename)):
-        return True
-    return False
+    return bool(os.path.exists(os.path.join(script_path, filename)))

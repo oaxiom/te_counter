@@ -236,11 +236,10 @@ class measureTE:
 
         total_reads = self.total_reads/1e6
 
-        oh = open(out_filename, 'w')
-        for k in sorted(result.keys()):
-            cpm = result[k] / total_reads
-            oh.write('{0}\t{1}\t{2}\n'.format(k, result[k], cpm))
-        oh.close()
+        with open(out_filename, 'w') as oh:
+            for k in sorted(result.keys()):
+                cpm = result[k] / total_reads
+                oh.write('{0}\t{1}\t{2}\n'.format(k, result[k], cpm))
         log.info('Saved {0}'.format(out_filename))
 
     def sc_parse_bamse(self, filename, UMIS=True, whitelistfilename=None, strand=False, log=None):
@@ -447,25 +446,22 @@ class measureTE:
             out_filename = '{0}.tsv'.format(out_filename)
         barcode_freq_filename = out_filename.replace('.tsv', '.barcode_freq.tsv')
 
-        oh = open(barcode_freq_filename, 'w')
-        for b in barcodes_to_do:
-            oh.write('{0}\t{1}\n'.format(b, self.barcodes[b]))
-        oh.close()
-
+        with open(barcode_freq_filename, 'w') as oh:
+            for b in barcodes_to_do:
+                oh.write('{0}\t{1}\n'.format(b, self.barcodes[b]))
         log.info('Saving barcode read frequency file to {0}'.format(barcode_freq_filename))
 
-        oh = open(out_filename, 'w')
-        oh.write('{0}\t{1}\n'.format('name', '\t'.join(result.keys())))
+        with open(out_filename, 'w') as oh:
+            oh.write('{0}\t{1}\n'.format('name', '\t'.join(result.keys())))
 
-        for barcode in barcodes_to_do:
-            counts = []
-            for feature in result:
-                if barcode in result[feature]: # Stop defaultdict from densifying
-                    counts.append(len(result[feature][barcode]))
-                else:
-                    counts.append(0)
-            oh.write('{0}\n'.format('\t'.join([barcode] + [str(c) for c in counts])))
-        oh.close()
+            for barcode in barcodes_to_do:
+                counts = []
+                for feature in result:
+                    if barcode in result[feature]: # Stop defaultdict from densifying
+                        counts.append(len(result[feature][barcode]))
+                    else:
+                        counts.append(0)
+                oh.write('{0}\n'.format('\t'.join([barcode] + [str(c) for c in counts])))
 
 if __name__ == '__main__':
     try:
