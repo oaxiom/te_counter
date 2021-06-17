@@ -116,6 +116,8 @@ class measureTE:
                     ensgs = set([i['ensg'] for i in result])
                     if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
                         for e in ensgs:
+                            if ':' in ensgs: # A TE, skip it
+                                continue
                             final_results[e] += 1
                     elif 'TE' in types:
                         for e in ensgs: # Not in any other mRNA, so okay to count as a TE
