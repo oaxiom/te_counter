@@ -90,11 +90,10 @@ class measureTE:
                 right_buck = ((loc2+1)//bucket_size) * bucket_size
                 buckets_reqd = [left_buck, right_buck] # list(range(left_buck, right_buck+bucket_size, bucket_size))
                 result = []
-                # get the ids reqd.
-                loc_ids = set()
-                #if buckets_reqd:
+
                 # I just align the two edges, then I don't need to worry about split-reads, and I rely on the duplicate removal
                 # To get rid of the same gene twice
+                loc_ids = set()
                 for buck in buckets_reqd:
                     if buck in self.genome.buckets[chrom]:
                         loc_ids.update(self.genome.buckets[chrom][buck]) # set = unique ids
@@ -114,11 +113,9 @@ class measureTE:
                     #for r in result:
                     #    print(r)
                     types = set([i['type'] for i in result])
-                    ensgs = set([i['ensg'] for i in result]) # only count 1 read to 1 gene
+                    ensgs = set([i['ensg'] for i in result])
                     if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
                         for e in ensgs:
-                            if ':' in ensgs: # A TE, skip it
-                                continue
                             final_results[e] += 1
                     elif 'TE' in types:
                         for e in ensgs: # Not in any other mRNA, so okay to count as a TE
