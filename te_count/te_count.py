@@ -129,7 +129,7 @@ class measureTE:
 
                 if idx % 1e6 == 0:
                     log.info('Processed {:,} reads'.format(idx))
-                    #break
+
         except StopIteration:
             pass # the last read
 
@@ -160,6 +160,13 @@ class measureTE:
         sam = pysam.AlignmentFile(filename, 'r')
         idx = 0
 
+        self_genome_linearData = self.genome.linearData
+
+        # preprocess loc lookups
+        loc_lookups = []
+        for feature in self_genome_linearData:
+            loc_lookups.append((feature['loc']['left'], feature['loc']['right']))
+
         try:
             while 1:
                 idx += 1
@@ -171,57 +178,55 @@ class measureTE:
                     continue
 
                 chrom = read1.reference_name.replace('chr', '')
-                left = read1.reference_start
-                rite = read1.reference_end
+                loc1 = read1.reference_start
+                loc2 = read1.reference_end
 
                 if chrom not in self.genome.buckets: # Must be a valid chromosome
                     continue
 
                 # reach into the genelist guts...
                 # work out which of the buckets is required:
-                left_buck = ((left-1)//bucket_size) * bucket_size
-                right_buck = (rite//bucket_size) * bucket_size
-                buckets_reqd = list(range(left_buck, right_buck+bucket_size, bucket_size))
+                left_buck = ((loc1-1)//bucket_size) * bucket_size
+                right_buck = ((loc2+1)//bucket_size) * bucket_size
+                buckets_reqd = [left_buck, right_buck] # list(range(left_buck, right_buck+bucket_size, bucket_size))
                 result = []
+
                 # get the ids reqd.
                 loc_ids = set()
-                if buckets_reqd:
-                    loc1 = miniglbase.location(chr=chrom, left=left, right=left+1)
-                    loc2 = miniglbase.location(chr=chrom, left=rite-1, right=rite) # I just align the two edges, then I don't need to worry about split-reads, and I rely on the duplicate removal
-                    # To get rid of the same gene twice
-                    for buck in buckets_reqd:
-                        if buck in self.genome.buckets[chrom]:
-                            loc_ids.update(self.genome.buckets[chrom][buck]) # set = unique ids
+                for buck in buckets_reqd:
+                    if buck in self.genome.buckets[chrom]:
+                        loc_ids.update(self.genome.buckets[chrom][buck]) # set = unique ids
 
-                    for index in loc_ids:
-                        #print loc.qcollide(self.linearData[index]["loc"]), loc, self.linearData[index]["loc"]
-                        if loc1.qcollide(self.genome.linearData[index]["loc"]): # Any 1 bp overlap...
-                            result.append(self.genome.linearData[index])
+                for index in loc_ids:
+                    locG_l = loc_lookups[index][0]
+                    locG_r = loc_lookups[index][1]
 
-                        if loc2.qcollide(self.genome.linearData[index]["loc"]): # Any 1 bp overlap...
-                            result.append(self.genome.linearData[index])
+                    if loc1 >= locG_l and loc1+1 <= locG_r:
+                        result.append(self_genome_linearData[index])
 
-                    if result:
-                        # do the annotation so that a read only gets counted to a TE if it does not hit a gene:
-                        #for r in result:
-                        #    print(r)
-                        types = set([i['type'] for i in result])
-                        ensgs = set([i['ensg'] for i in result]) # only count 1 read to 1 gene
-                        if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
-                            for e in ensgs:
-                                if ':' in ensgs: # A TE, skip it
-                                    continue
-                                final_results[e] += 1
-                        elif 'TE' in types:
-                            for e in ensgs: # Not in any other mRNA, so okay to count as a TE
-                                final_results[e] += 1
-                        elif 'enhancer' in types:
-                            for e in ensgs: # Not in any other mRNA, so okay to count as a TE
-                                final_results[e][barcode] += 1
-                        #print()
-                if idx % 1000000 == 0:
+                    if loc2-1 >= locG_l and loc2 <= locG_r: # Any 1 bp overlap...
+                        result.append(self_genome_linearData[index])
+
+                if result:
+                    # do the annotation so that a read only gets counted to a TE if it does not hit a gene:
+                    types = set([i['type'] for i in result])
+                    ensgs = set([i['ensg'] for i in result]) # only count 1 read to 1 gene
+                    if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
+                        for e in ensgs:
+                            if ':' in ensgs: # A TE, skip it
+                                continue
+                            final_results[e] += 1
+                    elif 'TE' in types:
+                        for e in ensgs: # Not in any other mRNA, so okay to count as a TE
+                            final_results[e] += 1
+                    elif 'enhancer' in types:
+                        for e in ensgs: # Not in any other mRNA, so okay to count as a TE
+                            final_results[e][barcode] += 1
+
+
+                if idx % 1e6 == 0:
                     log.info('Processed {:,} SE reads'.format(idx))
-                    #break
+
         except StopIteration:
             pass # the last read
 
