@@ -291,6 +291,8 @@ class measureTE:
         read_assinged_to_gene = 0
         valid_barcodes_reads = 0
         invalid_barcode_reads = 0
+        __quality_trimmed = 0
+        __read_qc_fail = 0
         __already_seen_umicb = 0
         sam = pysam.AlignmentFile(filename, 'r')
         idx = 0
@@ -306,9 +308,11 @@ class measureTE:
 
                 read = next(sam)
                 if read.is_unmapped or read.is_duplicate or read.is_qcfail:
+                    __read_qc_fail += 1
                     continue
 
                 if int(read.mapping_quality) < self.quality_threshold:
+                    __quality_trimmed += 1
                     continue
 
                 # Check we have a CR:Z and UR:Z key:
@@ -423,10 +427,18 @@ class measureTE:
             pass # the last read
 
         sam.close()
+
+        __total_rejected_reads = __already_seen_umicb + __quality_trimmed +__read_qc_fail
+        __total_valid_reads = idx - __total_rejected_reads
+
         log.info('Processed {:,} SE reads'.format(idx))
         log.info('Found {:,} invalid barcode reads'.format(invalid_barcode_reads))
-        log.info('{} UMI-CB combinations were seen multiple times and removed'.fomat(__already_seen_umicb))
-        log.info('Assigned {:,} ({:.1f}%) reads to features'.format(read_assinged_to_gene, (read_assinged_to_gene/idx * 100.0))) # add per cents here;
+        log.info('{:,} UMI-CB combinations were seen multiple times and removed'.fomat(__already_seen_umicb))
+        log.info('{:,} Read quality is too low (<{})'.fomat(__quality_trimmed, self.quality_threshold))
+        log.info('{:,} Reads QC failed'.fomat(__read_qc_fail))
+        log.info('{:,} total reads rejected'.format(__total_rejected_reads))
+        log.info('{:,} total valid reads'.format(__total_valid_reads))
+        log.info('Assigned {:,} ({:.1f}%) valid reads to features'.format(read_assinged_to_gene, ((read_assinged_to_gene/__total_valid_reads) * 100.0))) # add per cents here;
         self.total_reads = idx
 
         return final_results
