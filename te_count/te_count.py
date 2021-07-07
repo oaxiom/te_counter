@@ -291,6 +291,7 @@ class measureTE:
         read_assinged_to_gene = 0
         valid_barcodes_reads = 0
         invalid_barcode_reads = 0
+        __already_seen_umicb = 0
         sam = pysam.AlignmentFile(filename, 'r')
         idx = 0
 
@@ -343,11 +344,12 @@ class measureTE:
 
                 elif umi in umis: # umi/CB was seen
                     if strand:
-                        l = (chrom, left, loc_strand)
+                        l = (chrom, loc_strand)
                     else:
-                        l = (chrom, left)
+                        l = (chrom, )
 
                     if UMIS and l in umis[umi]: # check we haven't seen this fragment;
+                        __already_seen_umicb += 1
                         continue # We've seen this umi and loc before
                     umis[umi].add(l)
 
@@ -423,6 +425,7 @@ class measureTE:
         sam.close()
         log.info('Processed {:,} SE reads'.format(idx))
         log.info('Found {:,} invalid barcode reads'.format(invalid_barcode_reads))
+        log.info('{} UMI-CB combinations were seen multiple times and removed'.fomat(__already_seen_umicb))
         log.info('Assigned {:,} ({:.1f}%) reads to features'.format(read_assinged_to_gene, (read_assinged_to_gene/idx * 100.0))) # add per cents here;
         self.total_reads = idx
 
