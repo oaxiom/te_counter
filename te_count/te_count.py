@@ -435,7 +435,7 @@ class measureTE:
         log.info('Found {:,} invalid barcode reads'.format(invalid_barcode_reads))
         log.info('{:,} UMI-CB combinations were seen multiple times and removed'.fomat(__already_seen_umicb))
         log.info('{:,} Read quality is too low (<{})'.fomat(__quality_trimmed, self.quality_threshold))
-        log.info('{:,} Reads QC failed'.fomat(__read_qc_fail))
+        log.info('{:,} Reads QC failed'.format(__read_qc_fail))
         log.info('{:,} total reads rejected'.format(__total_rejected_reads))
         log.info('{:,} total valid reads'.format(__total_valid_reads))
         log.info('Assigned {:,} ({:.1f}%) valid reads to features'.format(read_assinged_to_gene, ((read_assinged_to_gene/__total_valid_reads) * 100.0))) # add per cents here;
