@@ -434,7 +434,7 @@ class measureTE:
         log.info('Processed {:,} SE reads'.format(idx))
         log.info('Found {:,} invalid barcode reads'.format(invalid_barcode_reads))
         log.info('{:,} UMI-CB combinations were seen multiple times and removed'.fomat(__already_seen_umicb))
-        log.info('{:,} Read quality is too low (<{})'.fomat(__quality_trimmed, self.quality_threshold))
+        log.info('{:,} Read quality is too low (<{})'.format(__quality_trimmed, self.quality_threshold))
         log.info('{:,} Reads QC failed'.format(__read_qc_fail))
         log.info('{:,} total reads rejected'.format(__total_rejected_reads))
         log.info('{:,} total valid reads'.format(__total_valid_reads))
