@@ -288,9 +288,9 @@ class measureTE:
         self.barcodes = {}
         umis = defaultdict(set)
         bucket_size = miniglbase.config.bucket_size
-        read_assinged_to_gene = 0
+        __read_assinged_to_gene = 0
         valid_barcodes_reads = 0
-        invalid_barcode_reads = 0
+        __invalid_barcode_reads = 0
         __quality_trimmed = 0
         __read_qc_fail = 0
         __already_seen_umicb = 0
@@ -325,7 +325,7 @@ class measureTE:
                 barcode = tags['CR']
                 if whitelist and barcode not in whitelist:
                     # TODO: 1 bp mismatch recovery
-                    invalid_barcode_reads += 1
+                    __invalid_barcode_reads += 1
                     continue
 
                 if UMIS:
@@ -420,7 +420,7 @@ class measureTE:
                                 if barcode not in final_results[e]:
                                     final_results[e][barcode] = set([])
                                 final_results[e][barcode].add(umi)
-                        read_assinged_to_gene += 1
+                        __read_assinged_to_gene += 1
                         #print()
 
         except StopIteration:
@@ -432,13 +432,13 @@ class measureTE:
         __total_valid_reads = idx - __total_rejected_reads
 
         log.info('Processed {:,} SE reads'.format(idx))
-        log.info('Found {:,} invalid barcode reads'.format(invalid_barcode_reads))
+        log.info('Found {:,} invalid barcode reads'.format(__invalid_barcode_reads))
         log.info('{:,} UMI-CB combinations were seen multiple times and removed'.format(__already_seen_umicb))
         log.info('{:,} Read quality is too low (<{})'.format(__quality_trimmed, self.quality_threshold))
         log.info('{:,} Reads QC failed'.format(__read_qc_fail))
         log.info('{:,} total reads rejected'.format(__total_rejected_reads))
         log.info('{:,} total valid reads'.format(__total_valid_reads))
-        log.info('Assigned {:,} ({:.1f}%) valid reads to features'.format(read_assinged_to_gene, ((read_assinged_to_gene/__total_valid_reads) * 100.0))) # add per cents here;
+        log.info('Assigned {:,} ({:.1f}%) valid reads to features'.format(__read_assinged_to_gene, ((__read_assinged_to_gene/__total_valid_reads) * 100.0))) # add per cents here;
         self.total_reads = idx
 
         return final_results
