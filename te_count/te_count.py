@@ -317,22 +317,25 @@ class measureTE:
 
                 # Check we have a CR:Z and UR:Z key:
                 tags = dict(read.get_tags())
-                if 'CR' not in tags: # No barcode
-                    continue
-                if UMIS and 'UR' not in tags: # No UMI
+                if 'CB' in tags:
+                    barcode = tags['CB']
+                elif 'CR' in tags:
+                    barcode = tags['CR']
+                else: # No barcode
                     continue
 
-                barcode = tags['CR']
                 if whitelist and barcode not in whitelist:
                     # TODO: 1 bp mismatch recovery
                     __invalid_barcode_reads += 1
                     continue
 
                 if UMIS:
-                    umi = '{0}-{1}'.format(tags['UR'], barcode) # UMI should be unique for both
-                else:
+                    if 'UB' in tags:
+                        umi = '{0}-{1}'.format(tags['UB'], barcode) # UMI should be unique for both
+                    elif 'UR' in tags:
+                        umi = '{0}-{1}'.format(tags['UR'], barcode) # UMI should be unique for both
+                else: #
                     umi = None # putting this here like this will ignore umis, and count all reads
-                    # i.e. typical RNA-seq policy.
 
                 chrom = read.reference_name.replace('chr', '')
                 if chrom not in self.genome.buckets: # Must be a valid chromosome
@@ -346,7 +349,7 @@ class measureTE:
                 if not umi:
                     pass # Just skip;
 
-                elif umi in umis: # umi/CB was seen
+                elif umi in umis: # umi/CB/chrom/strand was seen
                     if strand:
                         l = (chrom, loc_strand)
                     else:
