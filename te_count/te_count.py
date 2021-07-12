@@ -322,6 +322,7 @@ class measureTE:
                 elif 'CR' in tags:
                     barcode = tags['CR']
                 else: # No barcode
+                    raise AssertionError('CB or CR tag not found!')
                     continue
 
                 if whitelist and barcode not in whitelist:
@@ -334,6 +335,9 @@ class measureTE:
                         umi = '{0}-{1}'.format(tags['UB'], barcode) # UMI should be unique for both
                     elif 'UR' in tags:
                         umi = '{0}-{1}'.format(tags['UR'], barcode) # UMI should be unique for both
+                    else:
+                        raise AssertionError('UB or UR tag not found!')
+                        continue
                 else: #
                     umi = None # putting this here like this will ignore umis, and count all reads
 
@@ -435,7 +439,7 @@ class measureTE:
         __total_valid_reads = idx - __total_rejected_reads
 
         log.info('Processed {:,} SE reads'.format(idx))
-        log.info('Found {:,} invalid barcode reads'.format(__invalid_barcode_reads))
+        log.info('{:,} invalid barcode reads'.format(__invalid_barcode_reads))
         log.info('{:,} UMI-CB combinations were seen multiple times and removed'.format(__already_seen_umicb))
         log.info('{:,} Read quality is too low (<{})'.format(__quality_trimmed, self.quality_threshold))
         log.info('{:,} Reads QC failed'.format(__read_qc_fail))
