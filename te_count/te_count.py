@@ -88,7 +88,7 @@ class measureTE:
                 # work out which of the buckets is required:
                 left_buck = ((loc1-1)//bucket_size) * bucket_size
                 right_buck = ((loc2+1)//bucket_size) * bucket_size
-                buckets_reqd = [left_buck, right_buck] # list(range(left_buck, right_buck+bucket_size, bucket_size))
+                buckets_reqd = list(set([left_buck, right_buck])) # list(range(left_buck, right_buck+bucket_size, bucket_size))
                 result = []
 
                 # I just align the two edges, then I don't need to worry about split-reads, and I rely on the duplicate removal
@@ -383,10 +383,6 @@ class measureTE:
                     for index in loc_ids:
                         # check strands
 
-                        if strand: # Only collect results on the same strand
-                            if loc_strand != self.genome.linearData[index]["strand"]:
-                                continue
-
                         #print loc.qcollide(self.linearData[index]["loc"]), loc, self.linearData[index]["loc"]
                         #if loc1.qcollide(self.genome.linearData[index]["loc"]): # Any 1 bp overlap...
                         #    result.append(self.genome.linearData[index])
@@ -409,24 +405,30 @@ class measureTE:
                         # Is that wrong, or a reasonable compromise?
 
                         types = set([i['type'] for i in result])
-                        ensgs = set([i['ensg'] for i in result]) # only count 1 read to 1 gene
+                        ensgs = set([(i['ensg'], i['strand']) for i in result]) # only count 1 read to 1 gene
                         if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
                             for e in ensgs:
+                                # e[1] = strand Only collect gene results on the correct strand
+                                if loc_strand != e[1]:
+                                    continue
+
                                 if ':' in ensgs: # A TE, skip it
                                     continue
-                                if barcode not in final_results[e]:
-                                    final_results[e][barcode] = set([])
-                                final_results[e][barcode].add(umi)
+
+                                if barcode not in final_results[e[0]]:
+                                    final_results[e[0]][barcode] = set([])
+                                final_results[e[0]][barcode].add(umi)
+
                         elif 'TE' in types:
-                            for e in ensgs: # Not in any other mRNA, so okay to count as a TE
-                                if barcode not in final_results[e]:
-                                    final_results[e][barcode] = set([])
-                                final_results[e][barcode].add(umi)
+                            for e in ensgs: # Not in any other RNA, so okay to count as a TE
+                                if barcode not in final_results[e[0]]:
+                                    final_results[e[0]][barcode] = set([])
+                                final_results[e[0]][barcode].add(umi)
                         elif 'enhancer' in types:
-                            for e in ensgs: # Not in any other mRNA, so okay to count as a enhancer
-                                if barcode not in final_results[e]:
-                                    final_results[e][barcode] = set([])
-                                final_results[e][barcode].add(umi)
+                            for e in ensgs: # Not in any other RNA, so okay to count as a enhancer
+                                if barcode not in final_results[e[0]]:
+                                    final_results[e[0]][barcode] = set([])
+                                final_results[e[0]][barcode].add(umi)
                         __read_assinged_to_gene += 1
                         #print()
 
