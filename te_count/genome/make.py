@@ -79,10 +79,10 @@ def make_genes_tes(genome, log):
         if item['feature'] != 'exon': # i.e. only include in the annotation if it is an exon
             continue
 
-        if item['gene_type'] not in ('protein_coding', 'lncRNA'):
+        if item['gene_type'] not in ('protein_coding', 'lncRNA', 'lincRNA'):
             continue
 
-        if item['transcript_type'] not in ('protein_coding', 'lncRNA'):
+        if item['transcript_type'] not in ('protein_coding', 'lncRNA', 'lincRNA'):
             continue
 
         if item['loc']['chr'] not in chr_set:
