@@ -313,6 +313,11 @@ class measureTE:
 
         self_genome_linearData = self.genome.linearData
 
+        # preprocess loc lookups
+        loc_lookups = []
+        for feature in self_genome_linearData:
+            loc_lookups.append((feature['loc']['left'], feature['loc']['right']))
+
         try:
             while 1:
                 idx += 1
@@ -387,14 +392,19 @@ class measureTE:
                 # get the ids reqd.
                 loc_ids = set()
                 if buckets_reqd:
-                    loc1 = miniglbase.location(chr=chrom, left=left, right=left+1)
-                    loc2 = miniglbase.location(chr=chrom, left=rite-1, right=rite) # I just align the two edges, then I don't need to worry about split-reads, and I rely on the duplicate removal
+                    loc1_left = left
+                    loc1_rite = left+1
+                    loc2_left = rite-1
+                    loc2_rite = rite # I just align the two edges, then I don't need to worry about split-reads, and I rely on the duplicate removal
+
                     # To get rid of the same gene twice
                     for buck in buckets_reqd:
                         if buck in self.genome.buckets[chrom]:
                             loc_ids.update(self.genome.buckets[chrom][buck]) # set = unique ids
 
                     for index in loc_ids:
+                        locG_l = loc_lookups[index][0]
+                        locG_r = loc_lookups[index][1]
                         # check strands
 
                         #print loc.qcollide(self.linearData[index]["loc"]), loc, self.linearData[index]["loc"]
@@ -403,10 +413,10 @@ class measureTE:
 
                         locG = self_genome_linearData[index]["loc"]
 
-                        if loc1["right"] >= locG["left"] and loc1["left"] <= locG["right"]:
+                        if loc1_rite >= locG_l and loc1_left <= locG_r:
                             result.append(self_genome_linearData[index])
 
-                        if loc2["right"] >= locG["left"] and loc2["left"] <= locG["right"]: # Any 1 bp overlap...
+                        if loc2_rite >= locG_l and loc2_left <= locG_r: # Any 1 bp overlap...
                             result.append(self_genome_linearData[index])
 
                     if result:
