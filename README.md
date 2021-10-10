@@ -22,18 +22,24 @@ Count BAM files like this:
 Go to te_counter/test and you can execute the test scripts for various configurations:
 
 Paired-end bulk RNA-seq:
+
 te_count -i data/bulk_rnaseq_PE.bam -o run_results/bulk_out_PE.tsv -g mm10 -m genes_tes
 
 Single-end bulk RNA-seq (uses the paired-end BAM, pretend it's single-end)
+
 te_count --se -i data/bulk_rnaseq_PE.bam -o run_results/bulk_out_SE.tsv -g mm10 -m genes_tes
 
 10x-style single cell data, expects CB, UB SAM flags
+
 te_count -i data/single_cell_rnaseq.bam -g mm10 --se --sc -m genes_tes -o run_results/single_cell_out.tsv  --maxcells 3
+
 te_count -i data/single_cell_rnaseq.bam -g mm10 --se --sc -m genes_tes -o run_results/single_cell_strand_out.tsv -w barcodes/version1.txt --maxcells 3 --strand
 
 # HELP
 
 te_genome -h
+
+```
 usage: te_genome [-h] [--gtf GTF] [-f] -m MODE -g GENOME
 
 Builds the indices for te_count
@@ -44,9 +50,10 @@ required arguments:
                         Genome assembly to use, valid genomes: {'mm10', 'hg38'}
 
 Example usage: te_genome -g genome -m mode
-
+```
 te_count -h
 
+```
 usage: te_count [-h] [--se] [--sc] [--noumi] [--strand] [-q QUAL] [--maxcells MAXCELLS] [-w W] -i INBAM -o OUTTSV -g GENOME -m MODE
 
 Counts up the number of reads that overlap some set of gene/TE or other features
@@ -72,4 +79,4 @@ optional arguments:
   -w W                  A whitelist of barcodes. Becomes a requried argument of --sc
 
 Example usage: te_count -i in.bam -o out.bam -g genome -m genes_tes
-
+```
