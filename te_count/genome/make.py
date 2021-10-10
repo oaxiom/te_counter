@@ -34,9 +34,9 @@ def make_genes_tes(genome, log):
     os.system('wget -c -O {0}/{1}.chromSizes.gz ftp://hgdownload.cse.ucsc.edu/goldenPath/{1}/database/chromInfo.txt.gz'.format(script_path, genome))
     print('Decompressing/Filtering')
     if sys.platform == 'darwin':
-        os.system("gunzip -c {0}/{1}.chromSizes.gz | grep -v -E 'random|chrUn|chrM'  >{0}/{1}.chromSizes.clean".format(script_path, genome))
+        os.system("gunzip -c {0}/{1}.chromSizes.gz | grep -v -E 'random|chrUn|chrM|fix|alt'  >{0}/{1}.chromSizes.clean".format(script_path, genome))
     else:
-        os.system("gunzip -c {0}/{1}.chromSizes.gz | grep -v -r 'random|chrUn|chrM'  >{0}/{1}.chromSizes.clean".format(script_path, genome))
+        os.system("gunzip -c {0}/{1}.chromSizes.gz | grep -v -r 'random|chrUn|chrM|fix|alt'  >{0}/{1}.chromSizes.clean".format(script_path, genome))
 
     chr_set = frozenset(['X', 'Y'] + ['%s' % i for i in range(1, 30)])
 
