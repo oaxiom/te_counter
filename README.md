@@ -48,8 +48,11 @@ required arguments:
   -g GENOME, --genome GENOME
                         Genome assembly to use, valid genomes: {'mm10', 'hg38'}
 
-Example usage: te_genome -g genome -m mode
+Example usage: 
+te_genome -g genome -m mode
+te_genome -g genome_name -m custom --gtf gtf_file.gtf
 ```
+
 te_count -h
 
 ```

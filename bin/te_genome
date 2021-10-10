@@ -14,7 +14,7 @@ import te_count.genome
 
 # Command-line options;
 def prepare_parser():
-    exmp = 'Example usage: te_genome -g genome -m mode'
+    exmp = 'Example usage: te_genome -g hg38 -m genes_tes OR te_genome -g genome_name -m custom --gtf gtf_file.gtf'
 
     description = 'Builds the indices for te_count'
 
