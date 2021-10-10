@@ -3,9 +3,9 @@ A simple tool to count genes/TEs for reads from a BAM file
 
 # INSTALL
 
-No easy install, it's pure python, so just stick it on your PATH.
+No easy install, it's pure python, so just stick te_counter/bin/ on your PATH.
 
-Requires pysam.
+Requires pysam, shouldn't require anything else.
 
 # TUTORIAL
 
@@ -17,9 +17,7 @@ Supported genomes are mm10 and hg38
 
 You can build custom gtfs with --gtf (see help below)
 
-Count BAM files like this:
-
-Go to te_counter/test and you can execute the test scripts for various configurations:
+Count BAM files like this. Go to te_counter/test and you can execute the test scripts for various configurations:
 
 Paired-end bulk RNA-seq:
 ```
