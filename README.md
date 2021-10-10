@@ -10,9 +10,9 @@ Requires pysam.
 # TUTORIAL
 
 Build the indices like this:
-
+```
 te_genome -g hg38 -m gene_tes
-
+```
 Supported genomes are mm10 and hg38
 
 You can build custom gtfs with --gtf (see help below)
@@ -22,19 +22,20 @@ Count BAM files like this:
 Go to te_counter/test and you can execute the test scripts for various configurations:
 
 Paired-end bulk RNA-seq:
-
+```
 te_count -i data/bulk_rnaseq_PE.bam -o run_results/bulk_out_PE.tsv -g mm10 -m genes_tes
-
+```
 Single-end bulk RNA-seq (uses the paired-end BAM, pretend it's single-end)
-
+```
 te_count --se -i data/bulk_rnaseq_PE.bam -o run_results/bulk_out_SE.tsv -g mm10 -m genes_tes
-
+```
 10x-style single cell data, expects CB, UB SAM flags
-
+```
 te_count -i data/single_cell_rnaseq.bam -g mm10 --se --sc -m genes_tes -o run_results/single_cell_out.tsv  --maxcells 3
-
+```
+```
 te_count -i data/single_cell_rnaseq.bam -g mm10 --se --sc -m genes_tes -o run_results/single_cell_strand_out.tsv -w barcodes/version1.txt --maxcells 3 --strand
-
+```
 # HELP
 
 te_genome -h
