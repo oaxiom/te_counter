@@ -31,7 +31,7 @@ def make_genes_tes(genome, log):
     # Do the downloads, rely on wget to confirm if they are valid downloads:
     os.system('wget -c -O {0}/{1}               {2}'.format(script_path, gencode_name, gencode_url))
     os.system('wget -c -O {0}/{1}               http://hgdownload.soe.ucsc.edu/goldenPath/{2}/database/rmsk.txt.gz'.format(script_path, repeat_name, genome))
-    os.system('wget -c -O {0}/{1}.chromSizes.gz ftp://hgdownload.cse.ucsc.edu/goldenPath/{1}/database/chromInfo.txt.gz'.format(script_path, genome))
+    os.system('wget -c -O {0}/{1}.chromSizes.gz http://hgdownload.cse.ucsc.edu/goldenPath/{1}/database/chromInfo.txt.gz'.format(script_path, genome))
     print('Decompressing/Filtering')
     if sys.platform == 'darwin':
         os.system("gunzip -c {0}/{1}.chromSizes.gz | grep -v -E 'random|chrUn|chrM|fix|alt'  >{0}/{1}.chromSizes.clean".format(script_path, genome))
