@@ -18,10 +18,10 @@ def make_genes_tes(genome, log):
     # We have to hardcode the gencode URL as it's location can change and the naming is irregular
     if genome == 'mm10':
         gencode_name = 'gencode.vM23.annotation.gtf.gz'
-        gencode_url = 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/{0}'.format(gencode_name)
+        gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/{0}'.format(gencode_name)
     elif genome == 'hg38':
         gencode_name = 'gencode.v32.annotation.gtf.gz'
-        gencode_url = 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/{0}'.format(gencode_name)
+        gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/{0}'.format(gencode_name)
 
     repeat_name = '{0}_rmsk.txt.gz'.format(genome)
     final_name = '{0}_genes_tes.glb'.format(genome)
