@@ -472,6 +472,7 @@ class measureTE:
         log.info('{:,} total reads rejected'.format(__total_rejected_reads))
         log.info('{:,} total valid reads'.format(__total_valid_reads))
         log.info('Assigned {:,} ({:.1f}%) valid reads to features'.format(__read_assinged_to_gene, ((__read_assinged_to_gene/__total_valid_reads) * 100.0))) # add per cents here;
+
         self.total_reads = idx
 
         return final_results
