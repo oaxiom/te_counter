@@ -43,7 +43,7 @@ def make_genes_tes(genome, log):
     repeats = miniglbase.delayedlist(filename='{0}/{1}'.format(script_path, repeat_name), gzip=True, format=rmsk_track_form)
     gencode = miniglbase.delayedlist('{0}/{1}'.format(script_path, gencode_name), gzip=True, format=gtf_format)
 
-    keep_classes = frozenset(['LINE', 'LTR', 'SINE', 'DNA', 'Retroposon']) # Retroposon is for human, but we can safely keep it here
+    keep_classes = frozenset(['LINE', 'LTR', 'SINE', 'DNA', 'Retroposon', 'tRNA']) # Retroposon is for human, but we can safely keep it here
 
     added = 0
 
