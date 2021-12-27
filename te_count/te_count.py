@@ -496,7 +496,7 @@ class measureTE:
         barcodes_to_do = sorted(self.barcodes.items(), key=itemgetter(1), reverse=True)
         if len(self.barcodes) > maxcells: # Or dont bother doing
             # Work out the maxcells barcodes to save
-            log.info('Keeping the best {0:,} barcodes'.format(maxcells))
+            log.info(f'Keeping the best {maxcells:,} barcodes')
             barcodes_to_do = [i[0] for i in barcodes_to_do][0:maxcells]
         elif maxcells > len(self.barcodes):
             log.warning('Asked for {0:,} maxcells, but only {1:,} barcodes found'.format(maxcells, len(self.barcodes)))
@@ -505,7 +505,7 @@ class measureTE:
             barcodes_to_do = [i[0] for i in barcodes_to_do]
 
         if '.tsv' not in out_filename:
-            out_filename = '{0}.tsv'.format(out_filename)
+            out_filename = f"{out_filename}.tsv"
         barcode_freq_filename = out_filename.replace('.tsv', '.barcode_freq.tsv')
 
         with open(barcode_freq_filename, 'w') as oh:
