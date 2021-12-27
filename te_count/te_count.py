@@ -351,9 +351,9 @@ class measureTE:
 
                 if UMIS:
                     if 'UB' in tags:
-                        umi = '{0}-{1}'.format(tags['UB'], barcode) # UMI should be unique for both
+                        umi = f"{tags['UB']}-{barcode}" # UMI should be unique for both
                     elif 'UR' in tags:
-                        umi = '{0}-{1}'.format(tags['UR'], barcode) # UMI should be unique for both
+                        umi = f"{tags['UR']}-{barcode}" # UMI should be unique for both
                     else:
                         raise AssertionError('UB or UR tag not found!')
                         continue
