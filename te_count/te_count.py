@@ -378,7 +378,18 @@ class measureTE:
                     else:
                         l = (chrom, )
 
-                    if UMIS and l in umis[umi]: # check we haven't seen this fragment;
+                    if l in umis[umi]: # check we haven't seen this fragment;
+                        __already_seen_umicb += 1
+                        continue # We've seen this umi and loc before
+                    umis[umi].add(l)
+
+                else:
+                    if strand:
+                        l = (chrom, loc_strand)
+                    else:
+                        l = (chrom, )
+
+                    if l in umis[umi]: # check we haven't seen this fragment;
                         __already_seen_umicb += 1
                         continue # We've seen this umi and loc before
                     umis[umi].add(l)
