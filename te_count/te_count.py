@@ -456,19 +456,19 @@ class measureTE:
                                     continue
 
                                 if barcode not in final_results[e[0]]:
-                                    final_results[e[0]][barcode] = set([])
-                                final_results[e[0]][barcode].add(umi)
+                                    final_results[e[0]][barcode] = 0
+                                final_results[e[0]][barcode] += 1
 
                         elif 'TE' in types:
                             for e in ensgs: # Not in any other RNA, so okay to count as a TE
                                 if barcode not in final_results[e[0]]:
-                                    final_results[e[0]][barcode] = set([])
-                                final_results[e[0]][barcode].add(umi)
+                                    final_results[e[0]][barcode] = 0
+                                final_results[e[0]][barcode] += 1
                         elif 'enhancer' in types:
                             for e in ensgs: # Not in any other RNA, so okay to count as a enhancer
                                 if barcode not in final_results[e[0]]:
-                                    final_results[e[0]][barcode] = set([])
-                                final_results[e[0]][barcode].add(umi)
+                                    final_results[e[0]][barcode] = 0
+                                final_results[e[0]][barcode] += 1
                         __read_assinged_to_gene += 1
                         #print()
 
@@ -530,16 +530,16 @@ class measureTE:
         log.info('Saving barcode read frequency file to {0}'.format(barcode_freq_filename))
 
         with open(out_filename, 'w') as oh:
-            oh.write('{0}\t{1}\n'.format('name', '\t'.join(result.keys())))
+            oh.write('{}\t{}\n'.format('name', '\t'.join(result.keys())))
 
             for barcode in barcodes_to_do:
                 counts = []
                 for feature in result:
                     if barcode in result[feature]: # Stop defaultdict from densifying
-                        counts.append(len(result[feature][barcode]))
+                        counts.append(result[feature][barcode])
                     else:
                         counts.append(0)
-                oh.write('{0}\n'.format('\t'.join([barcode] + [str(c) for c in counts])))
+                oh.write('{}\n'.format('\t'.join([barcode] + [str(c) for c in counts])))
 
 if __name__ == '__main__':
     try:
