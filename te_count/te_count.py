@@ -286,6 +286,7 @@ class measureTE:
 
         '''
         assert filename, 'You must specify a filename'
+        assert whitelistfilename, 'You must specify a whitelist of barcodes'
 
         whitelist = None
         if whitelistfilename:
@@ -297,6 +298,10 @@ class measureTE:
                 whitelist.append(line.strip())
             oh.close()
             whitelist = set(whitelist)
+
+            # To save memory in key lookups
+            whitelist_to_id = {bc: i for i, bc in enumerate(whitelist)}
+
 
         final_results = {i: {} for i in self.all_feature_names} # pseudo-sparse array
         self.barcodes = {}
@@ -344,16 +349,16 @@ class measureTE:
                     raise AssertionError('CB or CR tag not found!')
                     continue
 
-                if whitelist and barcode not in whitelist:
+                if barcode not in whitelist:
                     # TODO: 1 bp mismatch recovery
                     __invalid_barcode_reads += 1
                     continue
 
                 if UMIS:
                     if 'UB' in tags:
-                        umi = '{0}-{1}'.format(tags['UB'], barcode) # UMI should be unique for both
+                        umi = (tags['UB'], whitelist_to_id[barcode]) # UMI should be unique for both
                     elif 'UR' in tags:
-                        umi = '{0}-{1}'.format(tags['UR'], barcode) # UMI should be unique for both
+                        umi = (tags['UR'], whitelist_to_id[barcode]) # UMI should be unique for both
                     else:
                         raise AssertionError('UB or UR tag not found!')
                         continue
@@ -378,7 +383,18 @@ class measureTE:
                     else:
                         l = (chrom, )
 
-                    if UMIS and l in umis[umi]: # check we haven't seen this fragment;
+                    if l in umis[umi]: # check we haven't seen this fragment;
+                        __already_seen_umicb += 1
+                        continue # We've seen this umi and loc before
+                    umis[umi].add(l)
+
+                else:
+                    if strand:
+                        l = (chrom, loc_strand)
+                    else:
+                        l = (chrom, )
+
+                    if l in umis[umi]: # check we haven't seen this fragment;
                         __already_seen_umicb += 1
                         continue # We've seen this umi and loc before
                     umis[umi].add(l)
@@ -461,7 +477,7 @@ class measureTE:
 
         sam.close()
 
-        __total_rejected_reads = __already_seen_umicb + __quality_trimmed +__read_qc_fail
+        __total_rejected_reads = __already_seen_umicb + __quality_trimmed +__read_qc_fail + __invalid_barcode_reads
         __total_valid_reads = idx - __total_rejected_reads
 
         log.info('Processed {:,} SE reads'.format(idx))
@@ -472,6 +488,7 @@ class measureTE:
         log.info('{:,} total reads rejected'.format(__total_rejected_reads))
         log.info('{:,} total valid reads'.format(__total_valid_reads))
         log.info('Assigned {:,} ({:.1f}%) valid reads to features'.format(__read_assinged_to_gene, ((__read_assinged_to_gene/__total_valid_reads) * 100.0))) # add per cents here;
+
         self.total_reads = idx
 
         return final_results
@@ -495,7 +512,7 @@ class measureTE:
         barcodes_to_do = sorted(self.barcodes.items(), key=itemgetter(1), reverse=True)
         if len(self.barcodes) > maxcells: # Or dont bother doing
             # Work out the maxcells barcodes to save
-            log.info('Keeping the best {0:,} barcodes'.format(maxcells))
+            log.info(f'Keeping the best {maxcells:,} barcodes')
             barcodes_to_do = [i[0] for i in barcodes_to_do][0:maxcells]
         elif maxcells > len(self.barcodes):
             log.warning('Asked for {0:,} maxcells, but only {1:,} barcodes found'.format(maxcells, len(self.barcodes)))
@@ -504,7 +521,7 @@ class measureTE:
             barcodes_to_do = [i[0] for i in barcodes_to_do]
 
         if '.tsv' not in out_filename:
-            out_filename = '{0}.tsv'.format(out_filename)
+            out_filename = f"{out_filename}.tsv"
         barcode_freq_filename = out_filename.replace('.tsv', '.barcode_freq.tsv')
 
         with open(barcode_freq_filename, 'w') as oh:

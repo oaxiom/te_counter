@@ -18,10 +18,10 @@ def make_genes_tes(genome, log):
     # We have to hardcode the gencode URL as it's location can change and the naming is irregular
     if genome == 'mm10':
         gencode_name = 'gencode.vM23.annotation.gtf.gz'
-        gencode_url = 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/{0}'.format(gencode_name)
+        gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/{0}'.format(gencode_name)
     elif genome == 'hg38':
         gencode_name = 'gencode.v32.annotation.gtf.gz'
-        gencode_url = 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/{0}'.format(gencode_name)
+        gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/{0}'.format(gencode_name)
 
     repeat_name = '{0}_rmsk.txt.gz'.format(genome)
     final_name = '{0}_genes_tes.glb'.format(genome)
@@ -31,19 +31,19 @@ def make_genes_tes(genome, log):
     # Do the downloads, rely on wget to confirm if they are valid downloads:
     os.system('wget -c -O {0}/{1}               {2}'.format(script_path, gencode_name, gencode_url))
     os.system('wget -c -O {0}/{1}               http://hgdownload.soe.ucsc.edu/goldenPath/{2}/database/rmsk.txt.gz'.format(script_path, repeat_name, genome))
-    os.system('wget -c -O {0}/{1}.chromSizes.gz ftp://hgdownload.cse.ucsc.edu/goldenPath/{1}/database/chromInfo.txt.gz'.format(script_path, genome))
+    os.system('wget -c -O {0}/{1}.chromSizes.gz http://hgdownload.cse.ucsc.edu/goldenPath/{1}/database/chromInfo.txt.gz'.format(script_path, genome))
     print('Decompressing/Filtering')
     if sys.platform == 'darwin':
         os.system("gunzip -c {0}/{1}.chromSizes.gz | grep -v -E 'random|chrUn|chrM|fix|alt'  >{0}/{1}.chromSizes.clean".format(script_path, genome))
     else:
-        os.system("gunzip -c {0}/{1}.chromSizes.gz | grep -v -r 'random|chrUn|chrM|fix|alt'  >{0}/{1}.chromSizes.clean".format(script_path, genome))
+        os.system("gunzip -c {0}/{1}.chromSizes.gz | grep -v -E 'random|chrUn|chrM|fix|alt'  >{0}/{1}.chromSizes.clean".format(script_path, genome))
 
     chr_set = frozenset(['X', 'Y'] + ['%s' % i for i in range(1, 30)])
 
     repeats = miniglbase.delayedlist(filename='{0}/{1}'.format(script_path, repeat_name), gzip=True, format=rmsk_track_form)
     gencode = miniglbase.delayedlist('{0}/{1}'.format(script_path, gencode_name), gzip=True, format=gtf_format)
 
-    keep_classes = frozenset(['LINE', 'LTR', 'SINE', 'DNA', 'Retroposon']) # Retroposon is for human, but we can safely keep it here
+    keep_classes = frozenset(['LINE', 'LTR', 'SINE', 'DNA', 'Retroposon', 'tRNA']) # Retroposon is for human, but we can safely keep it here
 
     added = 0
 
