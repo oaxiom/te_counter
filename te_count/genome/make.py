@@ -23,20 +23,20 @@ def make_genes_tes(genome, log):
         gencode_name = 'gencode.v32.annotation.gtf.gz'
         gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/{0}'.format(gencode_name)
 
-    repeat_name = '{0}_rmsk.txt.gz'.format(genome)
-    final_name = '{0}_genes_tes.glb'.format(genome)
+    repeat_name = f'{genome}_rmsk.txt.gz'
+    final_name = f'{genome}_genes_tes.glb'
 
     script_path = os.path.dirname(os.path.realpath(__file__))
 
     # Do the downloads, rely on wget to confirm if they are valid downloads:
-    os.system('wget -c -O {0}/{1}               {2}'.format(script_path, gencode_name, gencode_url))
-    os.system('wget -c -O {0}/{1}               http://hgdownload.soe.ucsc.edu/goldenPath/{2}/database/rmsk.txt.gz'.format(script_path, repeat_name, genome))
-    os.system('wget -c -O {0}/{1}.chromSizes.gz http://hgdownload.cse.ucsc.edu/goldenPath/{1}/database/chromInfo.txt.gz'.format(script_path, genome))
+    os.system(f'wget -c -O {script_path}/{gencode_name}         {gencode_url}')
+    os.system(f'wget -c -O {script_path}/{repeat_name}          http://hgdownload.soe.ucsc.edu/goldenPath/{genome}/database/rmsk.txt.gz')
+    os.system(f'wget -c -O {script_path}/{genome}.chromSizes.gz http://hgdownload.cse.ucsc.edu/goldenPath/{genome}/database/chromInfo.txt.gz')
     print('Decompressing/Filtering')
     if sys.platform == 'darwin':
-        os.system("gunzip -c {0}/{1}.chromSizes.gz | grep -v -E 'random|chrUn|chrM|fix|alt'  >{0}/{1}.chromSizes.clean".format(script_path, genome))
+        os.system(f"gunzip -c {script_path}/{genome}.chromSizes.gz | grep -v -E 'random|chrUn|chrM|fix|alt'  >{script_path}/{genome}.chromSizes.clean")
     else:
-        os.system("gunzip -c {0}/{1}.chromSizes.gz | grep -v -E 'random|chrUn|chrM|fix|alt'  >{0}/{1}.chromSizes.clean".format(script_path, genome))
+        os.system(f"gunzip -c {script_path}/{genome}.chromSizes.gz | grep -v -E 'random|chrUn|chrM|fix|alt'  >{script_path}/{genome}.chromSizes.clean")
 
     chr_set = frozenset(['X', 'Y'] + ['%s' % i for i in range(1, 30)])
 
