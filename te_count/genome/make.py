@@ -217,8 +217,8 @@ def make_snrnps(genome, log):
         gencode_name = 'gencode.vM23.annotation.gtf.gz'
         gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/{0}'.format(gencode_name)
     elif genome == 'hg38':
-        gencode_name = 'gencode.v32.annotation.gtf.gz'
-        gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/{0}'.format(gencode_name)
+        gencode_name = 'gencode.v42.annotation.gtf.gz'
+        gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_42/{0}'.format(gencode_name)
 
     final_name = f'{genome}_snrnps.glb'
 
