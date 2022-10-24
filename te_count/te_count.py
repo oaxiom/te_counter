@@ -131,6 +131,9 @@ class measureTE:
                     elif 'TE' in types:
                         for e in ensgs: # Not in any other mRNA, so okay to count as a TE
                             final_results[e] += 1
+                    elif 'snRNA' in types:
+                        for e in ensgs:
+                            final_results[e] += 1
                     elif 'enhancer' in types:
                         for e in ensgs: # Not in any other mRNA, so okay to count as a TE
                             final_results[e][barcode] += 1

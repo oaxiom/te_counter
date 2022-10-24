@@ -230,7 +230,6 @@ class _base_genelist:
                 return int(value)
             except ValueError:
                 # No support for loc cooercions in miniglbase
-
                 # this is not working, just store it as a string
                 return str(value).strip()
 

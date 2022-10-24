@@ -20,4 +20,7 @@ te_count -i data/single_cell_rnaseq.bam -w barcodes/version1.txt -g mm10 --sc -m
 #md5sum md5sum single_cell_out-enh.tsv  
 #match='1ae7dd557cb70bb83ccea84c84ec390c'
 
+# snrnps
+te_count -i data/bulk_rnaseq_PE.bam -o run_results/bulk_snrnps.tsv -g hg38 -m snrnps
+
 
