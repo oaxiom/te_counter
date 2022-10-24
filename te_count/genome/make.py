@@ -238,7 +238,6 @@ def make_snrnps(genome, log):
     gencode = miniglbase.delayedlist(f'{script_path}/{gencode_name}', gzip=True, format=gtf_format)
 
     print('Adding snRNAs')
-    added = 0
     newl = []
     p = miniglbase.progressbar(len(gencode))
     for idx, item in enumerate(gencode):
@@ -256,16 +255,15 @@ def make_snrnps(genome, log):
 
         newentry = {'loc': item['loc'],
             'strand': item['strand'],
-            'name': 'snRNA' + item['gene_name'],
+            'name': 'snRNA-' + item['gene_name'],
             'type': item['gene_type'],
             'ensg': item['gene_id'].split('.')[0],
             }
         newl.append(newentry)
-        added += 1
 
         p.update(idx)
 
-    print(f'\nAdded {added:,} features')
+    print(f'\nAdded {len(newl):,} features')
 
     gl = miniglbase.genelist()
     gl.load_list(newl)
