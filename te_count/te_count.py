@@ -167,6 +167,11 @@ class measureTE:
         '''
         assert filename, 'You must specify a filename'
 
+        __read_assinged_to_gene = 0
+        __quality_trimmed = 0
+        __read_qc_fail = 0
+        __invalid_chromosome = 0
+
         if strand:
             raise NotImplementedError()
 
@@ -189,9 +194,11 @@ class measureTE:
                 idx += 1
                 read1 = next(sam)
                 if read1.is_unmapped or read1.is_duplicate or read1.is_qcfail:
+                    __read_qc_fail += 1
                     continue
 
                 if int(read1.mapping_quality) < self.quality_threshold:
+                    __quality_trimmed += 1
                     continue
 
                 chrom = read1.reference_name.replace('chr', '')
@@ -199,6 +206,7 @@ class measureTE:
                 loc2 = read1.reference_end
 
                 if chrom not in self.genome.buckets: # Must be a valid chromosome
+                    __invalid_chromosome += 1
                     continue
 
                 # reach into the genelist guts...
@@ -242,8 +250,7 @@ class measureTE:
                     elif 'enhancer' in types:
                         for e in ensgs: # Not in any other mRNA, so okay to count as a TE
                             final_results[e][barcode] += 1
-
-
+                    __read_assinged_to_gene += 1
                 if idx % 1e6 == 0:
                     log.info('Processed {:,} SE reads'.format(idx))
 
@@ -252,6 +259,11 @@ class measureTE:
 
         sam.close()
         log.info('Processed {:,} SE reads'.format(idx))
+        log.info('Processed {:,} reads'.format(idx))
+        log.info('{:,} Reads were assigned to a gene'.format(__read_assinged_to_gene))
+        log.info('{:,} Read quality is too low (<{})'.format(__quality_trimmed, self.quality_threshold))
+        log.info('{:,} Reads mapped to an invalid chromosome'.format(__invalid_chromosome))
+        log.info('{:,} Reads are QC fails'.format(__read_qc_fail))
         self.total_reads = idx
 
         return final_results

@@ -21,6 +21,6 @@ te_count -i data/single_cell_rnaseq.bam -w barcodes/version1.txt -g mm10 --sc -m
 #match='1ae7dd557cb70bb83ccea84c84ec390c'
 
 # snrnps
-te_count -i data/bulk_rnaseq_PE.bam -o run_results/bulk_snrnps.tsv -g hg38 -m snrnps
-
+te_count -i data/bulk_rnaseq_PE.bam -o run_results/bulk_snrnpsiPE.tsv -g hg38 -m snrnps
+te_count --se -i data/bulk_rnaseq_PE.bam -o run_results/bulk_snrnpsSE.tsv -g hg38 -m snrnps
 
