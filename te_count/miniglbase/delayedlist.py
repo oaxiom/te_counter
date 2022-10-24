@@ -166,6 +166,7 @@ class delayedlist(genelist):
                 yield d # d should be valid
                 column = next(self.__reader) # get the next item
                 self.cindex += 1
+
         except StopIteration:
             self._optimiseData()
             return # py3.7 new
@@ -185,7 +186,6 @@ class delayedlist(genelist):
             self.filehandle = open(self.fullpath, "rt")
         else:
             self.filehandle = gzip.open(self.fullpath, 'rt') # must be rb :(
-
 
         if "force_tsv" in self.format and self.format["force_tsv"]:
             self.__reader = csv.reader(self.filehandle, dialect=csv.excel_tab, quoting=csv.QUOTE_NONE)
@@ -212,7 +212,7 @@ class delayedlist(genelist):
 
         self.linearData = self.__iter__()
         self.cindex = 0
-        return(True)
+        return True
 
     def __str__(self):
         self._optimiseData()
