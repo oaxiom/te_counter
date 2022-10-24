@@ -208,3 +208,67 @@ def make_custom(gtffilename, filename_for_index, log):
     gl.save(filename_for_index)
 
     return True
+
+def make_snrnps(genome, log):
+    from .. import miniglbase
+
+    # We have to hardcode the gencode URL as its location can change and the naming is irregular
+    if genome == 'mm10':
+        gencode_name = 'gencode.vM23.annotation.gtf.gz'
+        gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/{0}'.format(gencode_name)
+    elif genome == 'hg38':
+        gencode_name = 'gencode.v32.annotation.gtf.gz'
+        gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/{0}'.format(gencode_name)
+
+    final_name = f'{genome}_snrnps.glb'
+
+    script_path = os.path.dirname(os.path.realpath(__file__))
+
+    # Do the downloads, rely on wget to confirm if they are valid downloads:
+    os.system(f'wget -c -O {script_path}/{gencode_name}         {gencode_url}')
+    os.system(f'wget -c -O {script_path}/{genome}.chromSizes.gz http://hgdownload.cse.ucsc.edu/goldenPath/{genome}/database/chromInfo.txt.gz')
+    print('Decompressing/Filtering')
+    if sys.platform == 'darwin':
+        os.system(f"gunzip -c {script_path}/{genome}.chromSizes.gz | grep -v -E 'random|chrUn|chrM|fix|alt'  >{script_path}/{genome}.chromSizes.clean")
+    else:
+        os.system(f"gunzip -c {script_path}/{genome}.chromSizes.gz | grep -v -E 'random|chrUn|chrM|fix|alt'  >{script_path}/{genome}.chromSizes.clean")
+
+    chr_set = frozenset(['X', 'Y'] + ['%s' % i for i in range(1, 30)])
+
+    gencode = miniglbase.delayedlist(f'{script_path}/{gencode_name}', gzip=True, format=gtf_format)
+
+    print('Adding snRNAs')
+    added = 0
+    newl = []
+    p = miniglbase.progressbar(len(gencode))
+    for idx, item in enumerate(gencode):
+        if item['feature'] != 'exon': # i.e. only include in the annotation if it is an exon
+            continue
+
+        if item['gene_type'] not in ('snRNA'):
+            continue
+
+        if item['transcript_type'] not in ('snRNA'):
+            continue
+
+        if item['loc']['chr'] not in chr_set:
+            continue
+
+        newentry = {'loc': item['loc'],
+            'strand': item['strand'],
+            'name': 'snRNA' + item['gene_name'],
+            'type': item['gene_type'],
+            'ensg': item['gene_id'].split('.')[0],
+            }
+        newl.append(newentry)
+        added += 1
+
+        p.update(idx)
+
+    print(f'\nAdded {added:,} features')
+
+    gl = miniglbase.genelist()
+    gl.load_list(newl)
+    gl.save(f'{script_path}/{final_name}')
+
+    return True
