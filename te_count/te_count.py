@@ -454,6 +454,10 @@ class measureTE:
                             result.append(self_genome_linearData[index])
 
                     if result:
+                        # We are going to add to something:
+                        if barcode not in self.barcodes:
+                            self.barcodes[barcode] = 0
+                        self.barcodes[barcode] += 1
                         # do the annotation so that a read only gets counted to a TE if it does not hit a gene:
                         # This will currently allow 1 read to be counted twice if each edge is inside a different feature.
                         # Is that wrong, or a reasonable compromise?
