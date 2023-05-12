@@ -4,7 +4,7 @@ A counter for various genome features in a range of data.
 
 '''
 
-import sys, os, argparse, logging
+import sys, os, argparse, logging, random
 from collections import defaultdict
 from operator import itemgetter
 from . import miniglbase # miniglbase namespace mangling!
@@ -287,7 +287,14 @@ class measureTE:
                 oh.write('{0}\t{1}\t{2}\n'.format(k, result[k], cpm))
         log.info('Saved {0}'.format(out_filename))
 
-    def sc_parse_bamse(self, filename, UMIS=True, whitelistfilename=None, strand=False, log=None):
+    def sc_parse_bamse(self,
+        filename:str,
+        UMIS:bool = True,
+        whitelistfilename:str = None,
+        strand:bool = False,
+        log=None,
+        label:str = None,
+        maxcells:int = None):
         '''
         **Purpose**
             Load in a BAMSE file, for single cell data, and look for the CR and UMI tags.
@@ -302,24 +309,26 @@ class measureTE:
             whitelist (Required)
                 perform whitlisting on the barcodes;
 
+            label (Required)
+                label for the sample output
+
         '''
         assert filename, 'You must specify a filename'
         assert whitelistfilename, 'You must specify a whitelist of barcodes'
+        assert label, 'You must specify a label'
 
-        whitelist = None
-        if whitelistfilename:
-            if not os.path.exists(whitelistfilename):
-                raise AssertionError('{0} -w whitelist file not found'.format(whitelistfilename))
-            whitelist = []
-            oh = open(whitelistfilename)
-            for line in oh:
-                whitelist.append(line.strip())
-            oh.close()
-            whitelist = set(whitelist)
+        if not os.path.exists(whitelistfilename):
+            raise AssertionError(f'{whitelistfilename} -w whitelist file not found')
+        whitelist = []
+        oh = open(whitelistfilename, 'r')
+        for line in oh:
+            whitelist.append(line.strip())
+        oh.close()
+        whitelist = set(whitelist)
 
-            # To save memory in key lookups
-            whitelist_to_id = {bc: i for i, bc in enumerate(whitelist)}
-
+        # To save memory in key lookups
+        whitelist_to_id = {bc: i for i, bc in enumerate(whitelist)}
+        id_to_whitelist = {i: bc for i, bc in enumerate(whitelist)}
 
         final_results = {i: {} for i in self.all_feature_names} # pseudo-sparse array
         self.barcodes = {}
@@ -334,19 +343,31 @@ class measureTE:
         sam = pysam.AlignmentFile(filename, 'r')
         idx = 0
         loc_strand = None
+        bundles = []
 
-        self_genome_linearData = self.genome.linearData
+        def save_bundle(umi_dict):
+            bundle_name = f'tmp.{random.randint(1000, 100000):06d}.{label}.bun'
+            filehandle = open(bundle_name, 'w')
 
-        # preprocess loc lookups
-        loc_lookups = []
-        for feature in self_genome_linearData:
-            loc_lookups.append((feature['loc']['left'], feature['loc']['right']))
+            for umi in sorted(umi_dict):
+                filehandle.write(f"{umi[0]}\t{umi[1]}\t")
+                filehandle.write('\t'.join([str(i) for i in umi_dict[umi]]))
+                filehandle.write('\n')
 
+            filehandle.close()
+            return bundle_name
+
+        log.info('Part 1: Collapsing UMI/CB combinations')
         try:
             while 1:
                 idx += 1
-                if idx % 1000000 == 0:
+                if idx % 10000000 == 0:
                     log.info('Processed {:,} SE reads'.format(idx))
+                    bname = save_bundle(umis)
+                    log.info(f'Saved Bundle {bname}')
+                    bundles.append(bname)
+                    del umis
+                    umis = defaultdict(set)
                     #break
 
                 read = next(sam)
@@ -373,11 +394,14 @@ class measureTE:
                     __invalid_barcode_reads += 1
                     continue
 
+                # Convert barcode to index for memory and speed;
+                barcode = whitelist_to_id[barcode]
+
                 if UMIS:
                     if 'UB' in tags:
-                        umi = (tags['UB'], whitelist_to_id[barcode]) # UMI should be unique for both
+                        umi = (barcode, tags['UB']) # UMI should be unique for both
                     elif 'UR' in tags:
-                        umi = (tags['UR'], whitelist_to_id[barcode]) # UMI should be unique for both
+                        umi = (barcode, tags['UR']) # UMI should be unique for both
                     else:
                         raise AssertionError('UB or UR tag not found!')
                         continue
@@ -397,24 +421,95 @@ class measureTE:
                 if not umi:
                     pass # Just skip;
 
-                elif umi in umis: # umi/CB/chrom/strand was seen
+                elif umi in umis: # umi/CB was seen
                     if strand:
-                        l = (chrom, loc_strand)
+                        s = f'{chrom}:{loc_strand}:{left}:{rite}' # I do the proper unique chrom/strand below
                     else:
-                        l = (chrom, )
+                        s = f'{chrom}:NA:{left}:{rite}'
 
-                    if l in umis[umi]: # check we haven't seen this fragment;
+                    if s in umis[umi]: # check we haven't seen this fragment;
                         __already_seen_umicb += 1
                         continue # We've seen this umi and loc before
-                    umis[umi].add(l)
+
+                    umis[umi].add(s)
+                    if barcode not in self.barcodes:
+                        self.barcodes[barcode] = 0
+                    self.barcodes[barcode] += 1
 
                 else:
                     if strand:
-                        s = f'{chrom}{loc_strand}' # Small memory benefit
+                        s = f'{chrom}:{loc_strand}:{left}:{rite}' # I do the proper unique chrom/strand below
                     else:
-                        s = f'{chrom}'
+                        s = f'{chrom}:NA:{left}:{rite}'
 
                     umis[umi].add(s) # defaultdict set([])
+                    if barcode not in self.barcodes:
+                        self.barcodes[barcode] = 0
+                    self.barcodes[barcode] += 1
+
+        except StopIteration:
+            pass # the last read
+
+        # Save the final bundle
+        bname = save_bundle(umis)
+        log.info(f'Saved Bundle {bname}')
+        bundles.append(bname)
+        del umis
+        umis = None
+
+        ###### Part 2
+        log.info(f'Part 2: Get the best {maxcells} barcodes')
+        # I actually pad the maxcells by *2 to exclude possible
+        # artifact cells that have huge numbers of UMIs that
+        # don't map to a gene;
+
+        log.info(f'  Observed {len(self.barcodes)} raw barcodes')
+
+        umis = {}
+        barcodes_to_do = set([i[0] for i in sorted(self.barcodes.items(), key=itemgetter(1), reverse=True)[0:maxcells*2]])
+
+        for b in bundles:
+            oh = open(b, 'r')
+
+            for line in oh:
+                line = line.strip().split('\t')
+                barcode = int(line[0])
+                if barcode in barcodes_to_do: # One I want to keep;
+                    umis[(barcode, line[1])] = set(line[2:])
+
+            oh.close()
+
+            # Finished with the bundle;
+            os.remove(b)
+
+        self.barcodes = {} # Reset barcodes so that it reports number of UMIs mapping to features, not just raw UMI counts;
+
+        ###### Part 3
+        log.info('Part 3: Assigning the remaining UMIs to features')
+
+        # preprocess loc lookups
+        self_genome_buckets = self.genome.buckets
+        self_genome_linearData = self.genome.linearData
+        loc_lookups = []
+        for feature in self_genome_linearData:
+            loc_lookups.append((feature['loc']['left'], feature['loc']['right']))
+
+        for umi in umis:
+            barcode = id_to_whitelist[umi[0]]
+            #um = umi[1]
+
+            # I need to clean up the UMIs, as they are currently unique for chrom, [strand], left, rite
+            # But they should be unique for chrom, [strand] only
+            reads = {}
+            for r in umis[umi]:
+                r = r.split(':')
+                reads[(r[0], r[1])] = (int(r[2]), int(r[3])) # <chrom>, <strand> = <left>, <rite>
+
+            for r, c in reads.items():
+                chrom = r[0]
+                if strand: loc_strand = r[1]
+                left = c[0]
+                rite = c[1]
 
                 # reach into the genelist guts...
                 # work out which of the buckets is required:
@@ -432,8 +527,8 @@ class measureTE:
 
                     # To get rid of the same gene twice
                     for buck in buckets_reqd:
-                        if buck in self.genome.buckets[chrom]:
-                            loc_ids.update(self.genome.buckets[chrom][buck]) # set = unique ids
+                        if buck in self_genome_buckets[chrom]:
+                            loc_ids.update(self_genome_buckets[chrom][buck]) # set = unique ids
 
                     for index in loc_ids:
                         locG_l = loc_lookups[index][0]
@@ -488,9 +583,6 @@ class measureTE:
                         __read_assinged_to_feature += 1
                         #print()
 
-        except StopIteration:
-            pass # the last read
-
         sam.close()
 
         __total_rejected_reads = __already_seen_umicb + __quality_trimmed +__read_qc_fail + __invalid_barcode_reads
@@ -509,7 +601,7 @@ class measureTE:
 
         return final_results
 
-    def sc_save_result(self, result, out_filename, maxcells, log=None):
+    def sc_save_result(self, result, out_filename, maxcells=None, log=None):
         '''
         **Purpose**
             Save the data to a TSV file
@@ -519,6 +611,7 @@ class measureTE:
                 the filename to save the data to
         '''
         assert out_filename, 'You must specify a filename'
+        assert maxcells, 'You must specify maxcells'
 
         log.info('Densifying and saving "{0}"'.format(out_filename))
         log.info('Found {0:,} barcodes'.format(len(self.barcodes)))

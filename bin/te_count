@@ -95,15 +95,24 @@ def main():
         log.info('Found and loaded {} genome {}'.format(args.genome[0], args.mode[0]))
 
     if args.sc:
-        if not args.se:
+        if args.se: # single-end 10x-style
+            result = mte.sc_parse_bamse(args.inbam[0],
+                UMIS=not args.noumi,
+                maxcells=args.maxcells,
+                whitelistfilename=args.w,
+                strand=args.strand,
+                log=log,
+                label=os.path.split(args.outtsv[0])[1].replace('.tsv', ''))
+            mte.sc_save_result(result, args.outtsv[0], maxcells=args.maxcells, log=log)
+        else:
             raise AssertionError('PE path for --sc is not implemented')
-        result = mte.sc_parse_bamse(args.inbam[0], UMIS=not args.noumi, whitelistfilename=args.w, strand=args.strand, log=log)
-        mte.sc_save_result(result, args.outtsv[0], args.maxcells, log=log)
     else:
+        # Bulk /single sample pathway:
         if args.se:
             result = mte.parse_bamse(args.inbam[0], strand=args.strand, log=log)
         else:
             result = mte.parse_bampe(args.inbam[0], strand=args.strand, log=log)
+
         mte.save_result_bulk(result, args.outtsv[0], log=log)
     return
 
