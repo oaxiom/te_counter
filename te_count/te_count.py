@@ -325,7 +325,7 @@ class measureTE:
         self.barcodes = {}
         umis = defaultdict(set)
         bucket_size = miniglbase.config.bucket_size
-        __read_assinged_to_gene = 0
+        __read_assinged_to_feature = 0
         valid_barcodes_reads = 0
         __invalid_barcode_reads = 0
         __quality_trimmed = 0
@@ -333,6 +333,7 @@ class measureTE:
         __already_seen_umicb = 0
         sam = pysam.AlignmentFile(filename, 'r')
         idx = 0
+        loc_strand = None
 
         self_genome_linearData = self.genome.linearData
 
@@ -380,7 +381,7 @@ class measureTE:
                     else:
                         raise AssertionError('UB or UR tag not found!')
                         continue
-                else: #
+                else:
                     umi = None # putting this here like this will ignore umis, and count all reads
 
                 chrom = read.reference_name.replace('chr', '')
@@ -389,7 +390,8 @@ class measureTE:
 
                 left = read.reference_start
                 rite = read.reference_end
-                loc_strand = '-' if read.is_reverse else '+'
+                if strand:
+                    loc_strand = '-' if read.is_reverse else '+'
 
                 # Check we haven't seen this UMI/CB before:
                 if not umi:
@@ -481,7 +483,7 @@ class measureTE:
                                     final_results[e[0]][barcode] = 0
                                 final_results[e[0]][barcode] += 1
 
-                        __read_assinged_to_gene += 1
+                        __read_assinged_to_feature += 1
                         #print()
 
         except StopIteration:
@@ -499,7 +501,7 @@ class measureTE:
         log.info('{:,} Reads QC failed'.format(__read_qc_fail))
         log.info('{:,} total reads rejected'.format(__total_rejected_reads))
         log.info('{:,} total valid reads'.format(__total_valid_reads))
-        log.info('Assigned {:,} ({:.1f}%) valid reads to features'.format(__read_assinged_to_gene, ((__read_assinged_to_gene/__total_valid_reads) * 100.0))) # add per cents here;
+        log.info('Assigned {:,} ({:.1f}%) valid reads to features'.format(__read_assinged_to_feature, ((__read_assinged_to_feature/__total_valid_reads) * 100.0))) # add per cents here;
 
         self.total_reads = idx
 
