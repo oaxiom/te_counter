@@ -464,7 +464,7 @@ class measureTE:
                         if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
                             for e in ensgs:
                                 # e[1] = strand Only collect gene results on the correct strand
-                                if loc_strand != e[1]:
+                                if strand and loc_strand != e[1]: # Don't count if antisense to an exon.
                                     continue
 
                                 if barcode not in final_results[e[0]]:
@@ -482,6 +482,8 @@ class measureTE:
                                 if barcode not in final_results[e[0]]:
                                     final_results[e[0]][barcode] = 0
                                 final_results[e[0]][barcode] += 1
+                        else:
+                            continue  # Don't count the read to __read_assinged_to_feature
 
                         __read_assinged_to_feature += 1
                         #print()
