@@ -459,14 +459,14 @@ class measureTE:
 
         ###### Part 2
         log.info(f'Part 2: Get the best {maxcells} barcodes')
-        # I actually pad the maxcells by *2 to exclude possible
+        # I actually pad the maxcells by +1000 to exclude possible
         # artifact cells that have huge numbers of UMIs that
         # don't map to a gene;
 
         log.info(f'  Observed {len(self.barcodes)} raw barcodes')
 
         umis = {}
-        barcodes_to_do = set([i[0] for i in sorted(self.barcodes.items(), key=itemgetter(1), reverse=True)[0:maxcells*2]])
+        barcodes_to_do = set([i[0] for i in sorted(self.barcodes.items(), key=itemgetter(1), reverse=True)[0:maxcells+1000]])
 
         for b in bundles:
             oh = open(b, 'r')
@@ -485,7 +485,7 @@ class measureTE:
         self.barcodes = {} # Reset barcodes so that it reports number of UMIs mapping to features, not just raw UMI counts;
 
         ###### Part 3
-        log.info('Part 3: Assigning the remaining UMIs to features')
+        log.info('Part 3: Mapping the remaining UMIs to features')
 
         # preprocess loc lookups
         self_genome_buckets = self.genome.buckets
