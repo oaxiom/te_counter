@@ -27,9 +27,16 @@ class measureTE:
         self.total_reads = 0
         self.quality_threshold = quality_threshold
 
-    def bind_genome(self, genelist_glb_filename):
-        self.genome = miniglbase.glload(genelist_glb_filename)
+    def load_genome(self):
+        assert self.genelist_glb_filename, 'You need to bind the genome first'
+
+        self.genome = miniglbase.glload(self.genelist_glb_filename)
         self.all_feature_names = sorted(list(set(self.genome['ensg'])))
+
+    def bind_genome(self, genelist_glb_filename):
+        # For delayed loading
+        assert os.path.isfile(genelist_glb_filename), f'{genelist_glb_filename} not found'
+        self.genelist_glb_filename = genelist_glb_filename
 
     def parse_bampe(self, filename, strand=False, log=None):
         '''
@@ -330,7 +337,6 @@ class measureTE:
         whitelist_to_id = {bc: i for i, bc in enumerate(whitelist)}
         id_to_whitelist = {i: bc for i, bc in enumerate(whitelist)}
 
-        final_results = {i: {} for i in self.all_feature_names} # pseudo-sparse array
         self.barcodes = {}
         umis = defaultdict(set)
         bucket_size = miniglbase.config.bucket_size
@@ -409,7 +415,7 @@ class measureTE:
                     umi = None # putting this here like this will ignore umis, and count all reads
 
                 chrom = read.reference_name.replace('chr', '')
-                if chrom not in self.genome.buckets: # Must be a valid chromosome
+                if '_' in chrom or 'MT' in chrom or 'alt' in chrom: # Must be a valid chromosome
                     continue
 
                 left = read.reference_start
@@ -434,7 +440,7 @@ class measureTE:
                         continue # We've seen this umi and loc before
 
                     if strand:
-                        s = f'{chrom}:{loc_strand}:{left}:{rite}' # I do the proper unique chrom/strand below
+                        s = f'{chrom}:{loc_strand}:{left}:{rite}' # I do the proper unique chrom/strand below for all CB/UMIs
                     else:
                         s = f'{chrom}:NA:{left}:{rite}'
 
@@ -493,6 +499,11 @@ class measureTE:
 
         ###### Part 3
         log.info('Part 3: Mapping the remaining UMIs to features')
+
+        # Finally get the index;
+        self.load_genome()
+
+        final_results = {i: {} for i in self.all_feature_names} # pseudo-sparse array
 
         # preprocess loc lookups
         self_genome_buckets = self.genome.buckets

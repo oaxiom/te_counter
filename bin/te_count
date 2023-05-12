@@ -96,6 +96,7 @@ def main():
 
     if args.sc:
         if args.se: # single-end 10x-style
+            # Genome is loaded inside sc_parse_bamse()
             result = mte.sc_parse_bamse(args.inbam[0],
                 UMIS=not args.noumi,
                 maxcells=args.maxcells,
@@ -107,6 +108,7 @@ def main():
         else:
             raise AssertionError('PE path for --sc is not implemented')
     else:
+        mte.load_genome(args.genome[0])
         # Bulk /single sample pathway:
         if args.se:
             result = mte.parse_bamse(args.inbam[0], strand=args.strand, log=log)
