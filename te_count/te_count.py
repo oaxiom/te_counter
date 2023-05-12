@@ -368,9 +368,9 @@ class measureTE:
             while 1:
                 idx += 1
                 if idx % 10000000 == 0:
-                    log.info('Processed {:,} SE reads'.format(idx))
+                    log.info('  Processed {:,} SE reads'.format(idx))
                     bname = save_bundle(umis)
-                    log.info(f'Saved Bundle {bname}')
+                    log.info(f'  Saved Bundle {bname}')
                     bundles.append(bname)
                     del umis
                     umis = defaultdict(set)
@@ -465,7 +465,7 @@ class measureTE:
 
         # Save the final bundle
         bname = save_bundle(umis)
-        log.info(f'Saved Bundle {bname}')
+        log.info(f'  Saved Bundle {bname}')
         bundles.append(bname)
         del umis
         umis = None
@@ -480,6 +480,7 @@ class measureTE:
 
         umis = {}
         barcodes_to_do = set([i[0] for i in sorted(self.barcodes.items(), key=itemgetter(1), reverse=True)[0:maxcells+1000]])
+        self.barcodes = {} # Reset barcodes so that it reports number of UMIs mapping to features, not just raw UMI counts;
 
         for b in bundles:
             oh = open(b, 'r')
@@ -495,7 +496,7 @@ class measureTE:
             # Finished with the bundle;
             os.remove(b)
 
-        self.barcodes = {} # Reset barcodes so that it reports number of UMIs mapping to features, not just raw UMI counts;
+        del barcodes_to_do
 
         ###### Part 3
         log.info('Part 3: Mapping the remaining UMIs to features')
