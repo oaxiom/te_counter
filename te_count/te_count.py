@@ -423,13 +423,20 @@ class measureTE:
 
                 elif umi in umis: # umi/CB was seen
                     if strand:
+                        s = f'{chrom}:{loc_strand}' # I do the proper unique chrom/strand below
+                    else:
+                        s = f'{chrom}:NA:{left}'
+
+                    # About 99% of hits at this point actually match and can be safely removed.
+                    # So do a quick .startswith() on the Zeroth entry to filter possible hits.
+                    if next(iter(umis[umi])).startswith(s): # check we haven't seen this fragment;
+                        __already_seen_umicb += 1
+                        continue # We've seen this umi and loc before
+
+                    if strand:
                         s = f'{chrom}:{loc_strand}:{left}:{rite}' # I do the proper unique chrom/strand below
                     else:
                         s = f'{chrom}:NA:{left}:{rite}'
-
-                    if s in umis[umi]: # check we haven't seen this fragment;
-                        __already_seen_umicb += 1
-                        continue # We've seen this umi and loc before
 
                     umis[umi].add(s)
                     if barcode not in self.barcodes:
