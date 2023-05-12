@@ -391,7 +391,7 @@ class measureTE:
                 rite = read.reference_end
                 loc_strand = '-' if read.is_reverse else '+'
 
-                # Check we havne't seen this UMI/CB before:
+                # Check we haven't seen this UMI/CB before:
                 if not umi:
                     pass # Just skip;
 
@@ -412,10 +412,7 @@ class measureTE:
                     else:
                         l = (chrom, )
 
-                    if l in umis[umi]: # check we haven't seen this fragment;
-                        __already_seen_umicb += 1
-                        continue # We've seen this umi and loc before
-                    umis[umi].add(l)
+                    umis[umi].add(l) # defaultdict set([])
 
                 # reach into the genelist guts...
                 # work out which of the buckets is required:
@@ -445,7 +442,7 @@ class measureTE:
                         #if loc1.qcollide(self.genome.linearData[index]["loc"]): # Any 1 bp overlap...
                         #    result.append(self.genome.linearData[index])
 
-                        locG = self_genome_linearData[index]["loc"]
+                        #locG = self_genome_linearData[index]["loc"]
 
                         if loc1_rite >= locG_l and loc1_left <= locG_r:
                             result.append(self_genome_linearData[index])
@@ -470,9 +467,6 @@ class measureTE:
                                 if loc_strand != e[1]:
                                     continue
 
-                                if ':' in ensgs: # A TE, skip it
-                                    continue
-
                                 if barcode not in final_results[e[0]]:
                                     final_results[e[0]][barcode] = 0
                                 final_results[e[0]][barcode] += 1
@@ -482,11 +476,13 @@ class measureTE:
                                 if barcode not in final_results[e[0]]:
                                     final_results[e[0]][barcode] = 0
                                 final_results[e[0]][barcode] += 1
+
                         elif 'enhancer' in types:
                             for e in ensgs: # Not in any other RNA, so okay to count as a enhancer
                                 if barcode not in final_results[e[0]]:
                                     final_results[e[0]][barcode] = 0
                                 final_results[e[0]][barcode] += 1
+
                         __read_assinged_to_gene += 1
                         #print()
 
@@ -521,8 +517,6 @@ class measureTE:
                 the filename to save the data to
         '''
         assert out_filename, 'You must specify a filename'
-
-        #import matplotlib.pyplot as plot
 
         log.info('Densifying and saving "{0}"'.format(out_filename))
         log.info('Found {0:,} barcodes'.format(len(self.barcodes)))

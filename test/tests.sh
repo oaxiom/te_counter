@@ -24,3 +24,5 @@ te_count -i data/single_cell_rnaseq.bam -w barcodes/version1.txt -g mm10 --sc -m
 te_count -i data/bulk_rnaseq_PE.bam -o run_results/bulk_snrnpsiPE.tsv -g hg38 -m snrnps
 te_count --se -i data/bulk_rnaseq_PE.bam -o run_results/bulk_snrnpsSE.tsv -g hg38 -m snrnps
 
+# Scalene optimization path:
+python3 -m scalene main_for_profile.py
