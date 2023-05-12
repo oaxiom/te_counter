@@ -408,11 +408,11 @@ class measureTE:
 
                 else:
                     if strand:
-                        l = (chrom, loc_strand)
+                        s = f'{chrom}{loc_strand}' # Small memory benefit
                     else:
-                        l = (chrom, )
+                        s = f'{chrom}'
 
-                    umis[umi].add(l) # defaultdict set([])
+                    umis[umi].add(s) # defaultdict set([])
 
                 # reach into the genelist guts...
                 # work out which of the buckets is required:
@@ -441,8 +441,6 @@ class measureTE:
                         #print loc.qcollide(self.linearData[index]["loc"]), loc, self.linearData[index]["loc"]
                         #if loc1.qcollide(self.genome.linearData[index]["loc"]): # Any 1 bp overlap...
                         #    result.append(self.genome.linearData[index])
-
-                        #locG = self_genome_linearData[index]["loc"]
 
                         if loc1_rite >= locG_l and loc1_left <= locG_r:
                             result.append(self_genome_linearData[index])
