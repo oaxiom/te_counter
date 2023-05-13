@@ -26,7 +26,7 @@ class measureTE:
         self.base_path = base_path
         self.total_reads = 0
         self.quality_threshold = quality_threshold
-        self.random_number = f'tmp.{random.randint(1000, 100000):06d}'
+        self.random_number = f'{random.randint(1000, 100000):06d}'
 
     def load_genome(self):
         assert self.genelist_glb_filename, 'You need to bind the genome first'
@@ -351,9 +351,10 @@ class measureTE:
         idx = 0
         loc_strand = None
         bundles = []
+        bundle_idx = 1
 
-        def save_bundle(umi_dict):
-            bundle_name = f'tmp.{self.random_number}.{label}.bun'
+        def save_bundle(umi_dict, bundle_index):
+            bundle_name = f'tmp.{bundle_index:05d}.{self.random_number}.{label}.bun'
             filehandle = open(bundle_name, 'w')
 
             for umi in sorted(umi_dict):
@@ -368,9 +369,10 @@ class measureTE:
         try:
             while 1:
                 idx += 1
-                if idx % 10000000 == 0:
+                if idx % 1e7 == 0:
                     log.info('  Processed {:,} SE reads'.format(idx))
-                    bname = save_bundle(umis)
+                    bname = save_bundle(umis, bundle_idx)
+                    bundle_idx += 1
                     log.info(f'  Saved Bundle {bname}')
                     bundles.append(bname)
                     del umis
@@ -465,7 +467,7 @@ class measureTE:
             pass # the last read
 
         # Save the final bundle
-        bname = save_bundle(umis)
+        bname = save_bundle(umis, bundle_idx)
         log.info(f'  Saved Bundle {bname}')
         bundles.append(bname)
         del umis
