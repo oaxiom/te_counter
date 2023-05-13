@@ -489,7 +489,10 @@ class measureTE:
                 line = line.strip().split('\t')
                 barcode = int(line[0])
                 if barcode in barcodes_to_do: # One I want to keep;
-                    umis[(barcode, line[1])] = set(line[2:])
+                    if (barcode, line[1]) not in umis:
+                        umis[(barcode, line[1])] = set(line[2:])
+                    else:
+                        umis[(barcode, line[1])] | set(line[2:])
 
             oh.close()
             if idx % 10 == 0:
