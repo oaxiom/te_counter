@@ -482,7 +482,7 @@ class measureTE:
         barcodes_to_do = set([i[0] for i in sorted(self.barcodes.items(), key=itemgetter(1), reverse=True)[0:maxcells+1000]])
         self.barcodes = {} # Reset barcodes so that it reports number of UMIs mapping to features, not just raw UMI counts;
 
-        for b in bundles:
+        for idx, b in enumerate(bundles):
             oh = open(b, 'r')
 
             for line in oh:
@@ -492,6 +492,8 @@ class measureTE:
                     umis[(barcode, line[1])] = set(line[2:])
 
             oh.close()
+            if idx % 10 == 0:
+                log.info(f'  Consumed {idx}/{len(bundles)} of the bundles')
 
             # Finished with the bundle;
             os.remove(b)
