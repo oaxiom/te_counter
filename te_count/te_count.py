@@ -415,7 +415,7 @@ class measureTE:
                     umi = None # putting this here like this will ignore umis, and count all reads
 
                 chrom = read.reference_name.replace('chr', '')
-                if '_' in chrom or 'MT' in chrom or 'alt' in chrom: # Must be a valid chromosome
+                if '_' in chrom or 'MT' in chrom or 'alt' in chrom or 'M' in chrom: # Must be a valid chromosome
                     continue
 
                 left = read.reference_start
@@ -529,6 +529,9 @@ class measureTE:
                 if strand: loc_strand = r[1]
                 left = c[0]
                 rite = c[1]
+
+                if chrom not in self_genome_buckets:
+                    continue
 
                 # reach into the genelist guts...
                 # work out which of the buckets is required:
