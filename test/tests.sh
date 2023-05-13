@@ -1,4 +1,6 @@
 
+mkdir run_results
+
 # test bulk RNA-seq:
 te_count -i data/bulk_rnaseq_PE.bam -o run_results/bulk_out_PE.tsv -g mm10 -m genes_tes
 # Then md5 on the result:
