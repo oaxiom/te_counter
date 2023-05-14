@@ -2,7 +2,6 @@
 *.pyc
 __pycache__
 *.glb
-*.gz
 *.clean
 bulk_out_PE.tsv
 single_cell_out.tsv
