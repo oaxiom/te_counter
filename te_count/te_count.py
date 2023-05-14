@@ -498,13 +498,11 @@ class measureTE:
                         umis[(barcode, line[1])] | set(line[2:])
 
             oh.close()
-            if i % 10 == 0:
-                log.info(f'  Consumed {i}/{len(bundles)} of the bundles')
+            log.info(f'  Consumed {i+1}/{len(bundles)} of the bundles')
 
             # Finished with the bundle;
             os.remove(b)
 
-        log.info(f'  Consumed {i+1}/{len(bundles)} of the bundles')
         log.info(f'  Preserved {len(umis):,}/{idx:,} ({len(umis)/idx*100:.1f}%) of the reads')
 
         del barcodes_to_do
