@@ -504,6 +504,9 @@ class measureTE:
             # Finished with the bundle;
             os.remove(b)
 
+        log.info(f'  Consumed {i+1}/{len(bundles)} of the bundles')
+        log.info(f'  Preserved {len(umis):,}/{idx:,} ({len(umis)/idx*100:.1f}%) of the reads')
+
         del barcodes_to_do
 
         ###### Part 3
