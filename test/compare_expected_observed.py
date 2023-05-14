@@ -1,16 +1,23 @@
 
-import numpy
+import numpy, gzip
 import matplotlib.pyplot as plot
 
-def open_mat(filename):
+def open_mat(filename, gzip_file=False):
     tab = []
 
-    with open(filename, 'rt') as oh:
-        for line in oh:
-            if 'name' in line:
-                continue
-            t = [int(i) for i in line.strip().split('\t')[1:]]
-            tab.append(t)
+    if gzip_file:
+        fh = gzip.open(filename, 'rt')
+    else:
+        fh = open(filename, 'rt')
+
+    for line in fh:
+        if 'name' in line:
+            continue
+        t = [int(i) for i in line.strip().split('\t')[1:]]
+        tab.append(t)
+
+    fh.close()
+
     np = numpy.array(tab)
     np = np.T
 
@@ -20,7 +27,7 @@ def open_mat(filename):
 
 print('Loading')
 obs = open_mat('run_results/single_cell_out.tsv')
-exp = open_mat('run_results/single_cell_out-expected.tsv')
+exp = open_mat('run_results/single_cell_out-expected.tsv.gz', True)
 
 print('Plotting')
 fig = plot.figure()
@@ -34,7 +41,7 @@ fig.savefig('single_cell_out-plot.pdf')
 
 print('Loading')
 obs = open_mat('run_results/single_cell_strand_out.tsv')
-exp = open_mat('run_results/single_cell_strand_out-expected.tsv')
+exp = open_mat('run_results/single_cell_strand_out-expected.tsv.gz', True)
 
 fig = plot.figure()
 ax = fig.add_subplot(111)
