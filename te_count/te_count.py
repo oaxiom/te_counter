@@ -434,7 +434,7 @@ class measureTE:
                     if strand:
                         s = f'{chrom}:{loc_strand}' # I do the proper unique chrom/strand below
                     else:
-                        s = f'{chrom}:NA:{left}'
+                        s = f'{chrom}:NA'
 
                     # About 99% of hits at this point actually match and can be safely removed.
                     # So do a quick .startswith() on the Zeroth entry to filter possible hits.
