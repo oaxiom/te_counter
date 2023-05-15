@@ -671,7 +671,7 @@ class measureTE:
 
         umis.close()
         sam.close()
-        #os.remove(f'tmp.merged.{self.random_number}.{label}.bun')
+        os.remove(f'tmp.merged.{self.random_number}.{label}.bun')
 
         __total_rejected_reads = __already_seen_umicb + __quality_trimmed +__read_qc_fail + __invalid_barcode_reads
         __total_valid_reads = idx - __total_rejected_reads
