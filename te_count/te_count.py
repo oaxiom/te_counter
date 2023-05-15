@@ -335,8 +335,8 @@ class measureTE:
         whitelist = set(whitelist)
 
         # To save memory in key lookups
-        whitelist_to_id = {bc: i for i, bc in enumerate(whitelist)}
-        id_to_whitelist = {i: bc for i, bc in enumerate(whitelist)}
+        whitelist_to_id = {bc: i for i, bc in enumerate(sorted(whitelist))}
+        id_to_whitelist = {i: bc for i, bc in enumerate(sorted(whitelist))}
 
         self.barcodes = {}
         umis = defaultdict(set)
@@ -353,16 +353,21 @@ class measureTE:
         bundles = []
         bundle_idx = 1
 
-        def save_bundle(umi_dict, bundle_index):
-            bundle_name = f'tmp.{bundle_index:05d}.{self.random_number}.{label}.bun'
-            filehandle = open(bundle_name, 'w')
+        def save_bundle(umi_dict, bundle_index=None, filehandle=None):
+            if bundle_index:
+                bundle_name = f'tmp.{bundle_index:05d}.{self.random_number}.{label}.bun'
+                filehandle = open(bundle_name, 'w')
+            else:
+                filehandle = filehandle
+                bundle_name = None
 
             for umi in sorted(umi_dict):
                 filehandle.write(f"{umi[0]}\t{umi[1]}\t")
                 filehandle.write('\t'.join([str(i) for i in umi_dict[umi]]))
                 filehandle.write('\n')
 
-            filehandle.close()
+            if bundle_index: # This is a temporary file;
+                filehandle.close()
             return bundle_name
 
         log.info('Part 1: Collapsing UMI/CB combinations')
@@ -437,7 +442,7 @@ class measureTE:
                         s = f'{chrom}:NA'
 
                     # About 99% of hits at this point actually match and can be safely removed.
-                    # So do a quick .startswith() on the Zeroth entry to filter possible hits.
+                    # So do a .startswith() on the Zeroth entry to filter possible hits.
                     if next(iter(umis[umi])).startswith(s): # check we haven't seen this fragment;
                         __already_seen_umicb += 1
                         continue # We've seen this umi and loc before
@@ -471,10 +476,9 @@ class measureTE:
         log.info(f'  Saved Bundle {bname}')
         bundles.append(bname)
         del umis
-        umis = None
 
         ###### Part 2
-        log.info(f'Part 2: Get the best {maxcells} barcodes')
+        log.info(f'Part 2: Get the best {maxcells} barcodes and remove dupes')
         # I actually pad the maxcells by +1000 to exclude possible
         # artifact cells that have huge numbers of UMIs that
         # don't map to a gene;
@@ -483,27 +487,73 @@ class measureTE:
 
         umis = {}
         barcodes_to_do = set([i[0] for i in sorted(self.barcodes.items(), key=itemgetter(1), reverse=True)[0:maxcells+1000]])
+        barcodes_to_do = sorted(list(barcodes_to_do), reverse=True)
         self.barcodes = {} # Reset barcodes so that it reports number of UMIs mapping to features, not just raw UMI counts;
 
-        for i, b in enumerate(bundles):
-            oh = open(b, 'r')
+        bundle_handles = {}
 
-            for line in oh:
-                line = line.strip().split('\t')
-                barcode = int(line[0])
-                if barcode in barcodes_to_do: # One I want to keep;
-                    if (barcode, line[1]) not in umis:
-                        umis[(barcode, line[1])] = set(line[2:])
-                    else:
-                        umis[(barcode, line[1])] | set(line[2:])
+        # Open all the bundles;
+        for b in bundles:
+            bundle_handles[b] = {'oh': open(b, 'r'), 'line': None, 'BC': None}
+            # Populate the start
+            bundle_handles[b]['line'] = next(bundle_handles[b]['oh']).strip().split()
+            bundle_handles[b]['BC'] = int(bundle_handles[b]['line'][0])
 
-            oh.close()
-            log.info(f'  Consumed {i+1}/{len(bundles)} of the bundles')
+        output = open(f'tmp.merged.{self.random_number}.{label}.bun', 'w')
 
-            # Finished with the bundle;
-            os.remove(b)
+        umi_count = 0
 
-        log.info(f'  Preserved {len(umis):,}/{idx:,} ({len(umis)/idx*100:.1f}%) of the reads')
+        #print(barcodes_to_do)
+
+        while barcodes_to_do:
+            current_barcode = barcodes_to_do.pop()
+            this_barcode_data = []
+            umis = {}
+
+            # Read through each bundle till you get to the next barcode.
+            for b in bundle_handles:
+                while bundle_handles[b]['BC'] <= current_barcode:
+                    if not bundle_handles[b]['oh']:
+                        break # Already been consumed
+
+                    try:
+                        bundle_handles[b]['line'] = next(bundle_handles[b]['oh']).strip().split()
+                        bundle_handles[b]['BC'] = int(bundle_handles[b]['line'][0])
+                        if bundle_handles[b]['BC'] == current_barcode:
+                            this_barcode_data.append(bundle_handles[b]['line'])
+
+                            #print(bundle_handles[b]['line'])
+
+                    except StopIteration:
+                        bundle_handles[b]['oh'].close() # File is complete;
+                        bundle_handles[b]['oh'] = None
+                        log.info(f'  Consumed {b}')
+
+            umi_count += len(this_barcode_data)
+            #print(this_barcode_data)
+            # Process the reads for this barcode and save to a file
+            for read in this_barcode_data:
+                barcode = current_barcode
+                line = read
+
+                if (barcode, line[1]) not in umis:
+                    umis[(barcode, line[1])] = set(line[2:])
+                else:
+                    umis[(barcode, line[1])] | set(line[2:])
+
+            # This barcode is done, save the data to a new bundle;
+            if umis:
+                save_bundle(umis, filehandle=output)
+
+        output.close()
+
+        for i, b in enumerate(bundle_handles):
+            if bundle_handles[b]['oh']:
+                bundle_handles[b]['oh'].close()
+            os.remove(b) # Finished with the bundle;
+        log.info(f'  Cleaned up bundles')
+
+        log.info(f'  Preserved {umi_count:,}/{idx:,} ({umi_count/idx*100:.1f}%) of the reads')
 
         del barcodes_to_do
 
@@ -522,14 +572,19 @@ class measureTE:
         for feature in self_genome_linearData:
             loc_lookups.append((feature['loc']['left'], feature['loc']['right']))
 
+        umis = open(f'tmp.merged.{self.random_number}.{label}.bun', 'r')
+
         for umi in umis:
+            umi = umi.strip().split('\t')
+            umi[0] = int(umi[0])
+            #print(umi)
+
             barcode = id_to_whitelist[umi[0]]
-            #um = umi[1]
 
             # I need to clean up the UMIs, as they are currently unique for chrom, [strand], left, rite
             # But they should be unique for chrom, [strand] only
             reads = {}
-            for r in umis[umi]:
+            for r in umi[2:]:
                 r = r.split(':')
                 reads[(r[0], r[1])] = (int(r[2]), int(r[3])) # <chrom>, <strand> = <left>, <rite>
 
@@ -614,7 +669,9 @@ class measureTE:
                         __read_assinged_to_feature += 1
                         #print()
 
+        umis.close()
         sam.close()
+        #os.remove(f'tmp.merged.{self.random_number}.{label}.bun')
 
         __total_rejected_reads = __already_seen_umicb + __quality_trimmed +__read_qc_fail + __invalid_barcode_reads
         __total_valid_reads = idx - __total_rejected_reads
