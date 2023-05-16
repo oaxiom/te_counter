@@ -375,7 +375,12 @@ class measureTE:
             while 1:
                 idx += 1
                 if idx % 1e7 == 0:
-                    log.info('  Processed {:,} SE reads'.format(idx))
+                    log.info('  Processed {:,} SE valid reads'.format(idx))
+
+                if len(umis) >= 1e7:
+                    # Surprisingly, it is possible to get empty bundles.
+                    # I guess this is due to sections with large number of erroneous reads?
+                    # Hence only save when a bundle is actually full up.
                     bname = save_bundle(umis, bundle_idx)
                     bundle_idx += 1
                     log.info(f'  Saved Bundle {bname}')
@@ -472,10 +477,11 @@ class measureTE:
             pass # the last read
 
         # Save the final bundle
-        bname = save_bundle(umis, bundle_idx)
-        log.info(f'  Saved Bundle {bname}')
-        bundles.append(bname)
-        del umis
+        if len(umis) > 0:
+            bname = save_bundle(umis, bundle_idx)
+            log.info(f'  Saved Bundle {bname}')
+            bundles.append(bname)
+            del umis
 
         ###### Part 2
         log.info(f'Part 2: Get the best {maxcells} barcodes and remove dupes')
