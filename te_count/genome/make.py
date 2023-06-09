@@ -20,8 +20,8 @@ def make_genes_tes(genome, log):
         gencode_name = 'gencode.vM23.annotation.gtf.gz'
         gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/{0}'.format(gencode_name)
     elif genome == 'hg38':
-        gencode_name = 'gencode.v32.annotation.gtf.gz'
-        gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/{0}'.format(gencode_name)
+        gencode_name = 'gencode.v42.annotation.gtf.gz'
+        gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_42/{0}'.format(gencode_name)
 
     repeat_name = f'{genome}_rmsk.txt.gz'
     final_name = f'{genome}_genes_tes.glb'
@@ -38,7 +38,7 @@ def make_genes_tes(genome, log):
     else:
         os.system(f"gunzip -c {script_path}/{genome}.chromSizes.gz | grep -v -E 'random|chrUn|chrM|fix|alt'  >{script_path}/{genome}.chromSizes.clean")
 
-    chr_set = frozenset(['X', 'Y'] + ['%s' % i for i in range(1, 30)])
+    chr_set = frozenset(['X', 'Y', 'M'] + ['%s' % i for i in range(1, 30)])
 
     repeats = miniglbase.delayedlist(filename='{0}/{1}'.format(script_path, repeat_name), gzip=True, format=rmsk_track_form)
     gencode = miniglbase.delayedlist('{0}/{1}'.format(script_path, gencode_name), gzip=True, format=gtf_format)
@@ -59,11 +59,13 @@ def make_genes_tes(genome, log):
         if str(item['loc']['chr']) not in chr_set:
             continue
 
+        te_name = f"{item['repClass']}:{item['repFamily']}:{item['repName']}"
+
         newentry = {'loc': item['loc'],
             'strand': item['strand'],
-            'name': '%s:%s:%s' % (item['repClass'], item['repFamily'], item['repName']),
+            'name': te_name,
             'type': 'TE',
-            'ensg': '%s:%s:%s' % (item['repClass'], item['repFamily'], item['repName'])
+            'ensg': te_name,
             }
         newl.append(newentry)
         #print(newentry)
