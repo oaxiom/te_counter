@@ -4,7 +4,7 @@ A counter for various genome features in a range of data.
 
 '''
 
-import sys, os, argparse, logging, random
+import sys, os, argparse, logging, random, threading
 from collections import defaultdict
 from operator import itemgetter
 from . import miniglbase # miniglbase namespace mangling!
@@ -339,6 +339,7 @@ class measureTE:
         id_to_whitelist = {i: bc for i, bc in enumerate(sorted(whitelist))}
 
         self.barcodes = {}
+        bundle_save_status = {}
         umis = defaultdict(set)
         bucket_size = miniglbase.config.bucket_size
         __read_assinged_to_feature = 0
@@ -353,21 +354,16 @@ class measureTE:
         bundles = []
         bundle_idx = 1
 
-        def save_bundle(umi_dict, bundle_index=None, filehandle=None):
-            if bundle_index:
-                bundle_name = f'tmp.{self.random_number}.{bundle_index:05d}.{label}.bun'
-                filehandle = open(bundle_name, 'w')
-            else:
-                filehandle = filehandle
-                bundle_name = None
-
+        def save_bundle(umi_dict, filehandle=None, bundle_name=None, bundle_save_status=None):
             for umi in sorted(umi_dict):
                 filehandle.write(f"{umi[0]}\t{umi[1]}\t")
                 filehandle.write('\t'.join([str(i) for i in umi_dict[umi]]))
                 filehandle.write('\n')
 
-            if bundle_index: # This is a temporary file;
-                filehandle.close()
+            del umi_dict
+            bundle_save_status[bundle_name] = True
+            filehandle.close()
+
             return bundle_name
 
         log.info('Part 1: Collapsing UMI/CB combinations')
@@ -381,11 +377,15 @@ class measureTE:
                     # Surprisingly, it is possible to get empty bundles.
                     # I guess this is due to sections with large number of erroneous reads?
                     # Hence only save when a bundle is actually full up.
-                    bname = save_bundle(umis, bundle_idx)
+                    bundle_name = f'tmp.{self.random_number}.{bundle_idx:05d}.{label}.bun'
+                    filehandle = open(bundle_name, 'w')
+                    bundle_save_status[bundle_name] = False
+                    save_thread = threading.Thread(target=save_bundle, args=(umis, filehandle, bundle_name, bundle_save_status))
+                    save_thread.start()
+                    bundles.append(bundle_name)
+
                     bundle_idx += 1
-                    log.info(f'  Saved Bundle {bname}')
-                    bundles.append(bname)
-                    del umis
+                    log.info(f'  Saved Bundle {bundle_name}')
                     umis = defaultdict(set)
                     #break
 
@@ -476,10 +476,18 @@ class measureTE:
 
         # Save the final bundle
         if len(umis) > 0:
-            bname = save_bundle(umis, bundle_idx)
+            bundle_name = f'tmp.{self.random_number}.{bundle_idx:05d}.{label}.bun'
+            filehandle = open(bundle_name, 'w')
+            bundle_save_status[bundle_name] = False # Although this one is not threaded.
+            bname = save_bundle(umis, filehandle, bundle_name, bundle_save_status)
             log.info(f'  Saved Bundle {bname}')
             bundles.append(bname)
             del umis
+
+        log.info('  Waiting for all bundles to complete')
+        # Make sure all threads are done
+        while False in bundle_save_status.values():
+            time.sleep(1)
 
         ###### Part 2
         log.info(f'Part 2: Get the best {maxcells} barcodes and remove dupes')
@@ -507,12 +515,12 @@ class measureTE:
 
         umi_count = 0
 
-        #print(barcodes_to_do)
-
         while barcodes_to_do:
             current_barcode = barcodes_to_do.pop()
             this_barcode_data = []
             umis = {}
+
+            #print(current_barcode, bundle_handles)
 
             # Read through each bundle till you get to the next barcode.
             for b in bundle_handles:
@@ -526,7 +534,7 @@ class measureTE:
                         if bundle_handles[b]['BC'] == current_barcode:
                             this_barcode_data.append(bundle_handles[b]['line'])
 
-                            #print(bundle_handles[b]['line'])
+                            #print(bundle_handles[b]['line']) 6 835 392 052
 
                     except StopIteration:
                         bundle_handles[b]['oh'].close() # File is complete;
@@ -547,7 +555,10 @@ class measureTE:
 
             # This barcode is done, save the data to a new bundle;
             if umis:
-                save_bundle(umis, filehandle=output)
+                for umi in umis: # Don't need to sort
+                    output.write(f"{umi[0]}\t{umi[1]}\t")
+                    output.write('\t'.join([str(i) for i in umis[umi]]))
+                    output.write('\n')
 
         output.close()
 
