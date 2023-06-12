@@ -361,8 +361,9 @@ class measureTE:
                 filehandle.write('\n')
 
             del umi_dict
-            bundle_save_status[bundle_name] = True
+
             filehandle.close()
+            bundle_save_status[bundle_name] = True
 
             return bundle_name
 
