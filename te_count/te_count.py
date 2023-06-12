@@ -569,7 +569,8 @@ class measureTE:
             os.remove(b) # Finished with the bundle;
         log.info(f'  Cleaned up bundles')
 
-        log.info(f'  Preserved {umi_count:,}/{idx:,} ({umi_count/idx*100:.1f}%) of the reads')
+        __total_valid_reads = umi_count
+        log.info(f'  Preserved {__total_valid_reads:,}/{idx:,} ({__total_valid_reads/idx*100:.1f}%) of the reads')
 
         del barcodes_to_do
 
@@ -689,17 +690,17 @@ class measureTE:
         sam.close()
         os.remove(f'tmp.merged.{self.random_number}.{label}.bun')
 
+        # This number is wrong. Seems there are a few leaky rejected reads not recorded.
         __total_rejected_reads = __already_seen_umicb + __quality_trimmed +__read_qc_fail + __invalid_barcode_reads
-        __total_valid_reads = idx - __total_rejected_reads
 
-        log.info('  Processed {:,} SE reads'.format(idx))
+        log.info('  In the total pipeling, processed {:,} SE reads'.format(idx))
         log.info('  {:,} invalid barcode reads'.format(__invalid_barcode_reads))
         log.info('  {:,} UMI-CB combinations were seen multiple times and removed'.format(__already_seen_umicb))
         log.info('  {:,} Read quality is too low (<{})'.format(__quality_trimmed, self.quality_threshold))
         log.info('  {:,} Reads QC failed'.format(__read_qc_fail))
-        log.info('  {:,} total reads rejected'.format(__total_rejected_reads))
+        #log.info('  {:,} total reads rejected'.format(__total_rejected_reads))
         log.info('  {:,} total valid reads'.format(__total_valid_reads))
-        log.info('  Assigned {:,} ({:.1f}%) valid reads to features'.format(__read_assinged_to_feature, ((__read_assinged_to_feature/__total_valid_reads) * 100.0))) # add per cents here;
+        log.info('  Assigned {:,} ({:.1f}%) of total valid reads to features'.format(__read_assinged_to_feature, ((__read_assinged_to_feature/__total_valid_reads) * 100.0))) # add per cents here;
 
         self.total_reads = idx
 
