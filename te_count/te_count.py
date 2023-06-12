@@ -355,7 +355,7 @@ class measureTE:
 
         def save_bundle(umi_dict, bundle_index=None, filehandle=None):
             if bundle_index:
-                bundle_name = f'tmp.{bundle_index:05d}.{self.random_number}.{label}.bun'
+                bundle_name = f'tmp.{self.random_number}.{bundle_index:05d}.{label}.bun'
                 filehandle = open(bundle_name, 'w')
             else:
                 filehandle = filehandle
@@ -427,8 +427,8 @@ class measureTE:
                 else:
                     umi = None # putting this here like this will ignore umis, and count all reads
 
-                chrom = read.reference_name.replace('chr', '')
-                if '_' in chrom or 'MT' in chrom or 'alt' in chrom or 'M' in chrom: # Must be a valid chromosome
+                chrom = read.reference_name.replace('chr', '') # save memory
+                if '_' in chrom or 'alt' in chrom: # Must be a valid chromosome
                     continue
 
                 left = read.reference_start
@@ -446,16 +446,14 @@ class measureTE:
                     else:
                         s = f'{chrom}:NA'
 
-                    # About 99% of hits at this point actually match and can be safely removed.
+                    # About 99% of hits at this point match and can be removed.
                     # So do a .startswith() on the Zeroth entry to filter possible hits.
                     if next(iter(umis[umi])).startswith(s): # check we haven't seen this fragment;
                         __already_seen_umicb += 1
                         continue # We've seen this umi and loc before
 
-                    if strand:
-                        s = f'{chrom}:{loc_strand}:{left}:{rite}' # I do the proper unique chrom/strand below for all CB/UMIs
-                    else:
-                        s = f'{chrom}:NA:{left}:{rite}'
+                    # Update the key, so that I can do the proper unique chrom/strand below for all CB/UMIs
+                    s = f'{s}:{left}:{rite}'
 
                     umis[umi].add(s)
                     if barcode not in self.barcodes:
