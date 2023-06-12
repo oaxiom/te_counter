@@ -496,7 +496,7 @@ class measureTE:
         # artifact cells that have huge numbers of UMIs that
         # don't map to a gene;
 
-        log.info(f'  Observed {len(self.barcodes)} raw barcodes')
+        log.info(f'  Observed {len(self.barcodes):,} raw barcodes')
 
         umis = {}
         barcodes_to_do = set([i[0] for i in sorted(self.barcodes.items(), key=itemgetter(1), reverse=True)[0:maxcells+1000]])
