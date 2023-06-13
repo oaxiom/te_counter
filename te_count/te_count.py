@@ -589,7 +589,7 @@ class measureTE:
         for feature in self_genome_linearData:
             loc_lookups.append((feature['loc']['left'], feature['loc']['right']))
 
-        umis = open(f'tmp.merged.{self.random_number}.{label}.bun', 'r')
+        umis = open(f'tmp.{self.random_number}.merged.{label}.bun', 'r')
 
         for umi in umis:
             umi = umi.strip().split('\t')
@@ -688,7 +688,7 @@ class measureTE:
 
         umis.close()
         sam.close()
-        os.remove(f'tmp.merged.{self.random_number}.{label}.bun')
+        os.remove(f'tmp.{self.random_number}.merged.{label}.bun')
 
         # This number is wrong. Seems there are a few leaky rejected reads not recorded.
         __total_rejected_reads = __already_seen_umicb + __quality_trimmed +__read_qc_fail + __invalid_barcode_reads
