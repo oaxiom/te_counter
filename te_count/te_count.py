@@ -512,7 +512,7 @@ class measureTE:
             bundle_handles[b]['line'] = next(bundle_handles[b]['oh']).strip().split()
             bundle_handles[b]['BC'] = int(bundle_handles[b]['line'][0])
 
-        output = open(f'tmp.merged.{self.random_number}.{label}.bun', 'w')
+        output = open(f'tmp.{self.random_number}.merged.{label}.bun', 'w')
 
         umi_count = 0
 
