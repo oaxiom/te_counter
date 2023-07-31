@@ -92,8 +92,9 @@ def main():
             sys.exit()
         log.info('Found Genome {}/{}'.format(genome, args.mode[0]))
         mte.bind_genome(os.path.join(script_path, '../te_count/genome/{}_{}.glb'.format(genome, args.mode[0])))
-        log.info('Found and loaded {} genome {}'.format(args.genome[0], args.mode[0]))
+        log.info('Found {} genome {}'.format(args.genome[0], args.mode[0]))
 
+    # Split paths:
     if args.sc:
         if args.se: # single-end 10x-style
             # Genome is loaded inside sc_parse_bamse()
@@ -108,8 +109,9 @@ def main():
         else:
             raise AssertionError('PE path for --sc is not implemented')
     else:
-        mte.load_genome(args.genome[0])
-        # Bulk /single sample pathway:
+        mte.load_genome()
+
+        # Bulk /SMART-seq sample pathway:
         if args.se:
             result = mte.parse_bamse(args.inbam[0], strand=args.strand, log=log)
         else:
