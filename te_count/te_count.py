@@ -4,7 +4,7 @@ A counter for various genome features in a range of data.
 
 '''
 
-import sys, os, argparse, logging, random, threading
+import sys, os, argparse, logging, random, threading, time
 from collections import defaultdict
 from operator import itemgetter
 from . import miniglbase # miniglbase namespace mangling!
