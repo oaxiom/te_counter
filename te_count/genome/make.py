@@ -19,12 +19,18 @@ def make_genes_tes(genome, log):
     if genome == 'mm10':
         gencode_name = 'gencode.vM23.annotation.gtf.gz'
         gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/{0}'.format(gencode_name)
+        gene_biotype_label = 'gene_type'
+        transcript_biotype_label = 'transcript_type'
     elif genome == 'hg38':
         gencode_name = 'gencode.v42.annotation.gtf.gz'
         gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_42/{0}'.format(gencode_name)
+        gene_biotype_label = 'gene_type'
+        transcript_biotype_label = 'transcript_type'
     elif genome == 'macFas5':
         gencode_name = 'Macaca_fascicularis.Macaca_fascicularis_6.0.115.gtf.gz'
         gencode_url = 'https://ftp.ensembl.org/pub/release-115/gtf/macaca_fascicularis/{0}'.format(gencode_name)
+        gene_biotype_label = 'gene_biotype'
+        transcript_biotype_label = 'transcript_biotype'
 
     repeat_name = f'{genome}_rmsk.txt.gz'
     final_name = f'{genome}_genes_tes.glb'
@@ -84,19 +90,24 @@ def make_genes_tes(genome, log):
         if item['feature'] != 'exon': # i.e. only include in the annotation if it is an exon
             continue
 
-        if item['gene_type'] not in ('protein_coding', 'lncRNA', 'lincRNA'):
+        if item[gene_biotype_label] not in ('protein_coding', 'lncRNA', 'lincRNA'):
             continue
 
-        if item['transcript_type'] not in ('protein_coding', 'lncRNA', 'lincRNA'):
+        if item[transcript_biotype_label] not in ('protein_coding', 'lncRNA', 'lincRNA'):
             continue
 
         if item['loc']['chr'] not in chr_set:
             continue
 
+        if 'gene_name' in item: # For macFas5 genome;
+            gene_name = item['gene_name']
+        else:
+            gene_name = item['gene_id']
+
         newentry = {'loc': item['loc'],
             'strand': item['strand'],
-            'name': item['gene_name'],
-            'type': item['gene_type'],
+            'name': gene_name,
+            'type': item[gene_biotype_label],
             'ensg': item['gene_id'].split('.')[0],
             }
         newl.append(newentry)
