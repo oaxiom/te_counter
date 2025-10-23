@@ -6,7 +6,7 @@ Package for genome annotations
 
 import os
 
-valid_assemblies = {'mm10', 'hg38'}
+valid_assemblies = {'mm10', 'hg38', 'macFas5'}
 valid_modes = {'genes_tes', 'enhancers', 'snrnps'}
 
 from .. import common

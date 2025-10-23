@@ -22,6 +22,9 @@ def make_genes_tes(genome, log):
     elif genome == 'hg38':
         gencode_name = 'gencode.v42.annotation.gtf.gz'
         gencode_url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_42/{0}'.format(gencode_name)
+    elif genome == 'macFas5':
+        gencode_name = 'Macaca_fascicularis.Macaca_fascicularis_6.0.115.gtf.gz'
+        gencode_url = 'https://ftp.ensembl.org/pub/release-115/gtf/macaca_fascicularis/{0}'.format(gencode_name)
 
     repeat_name = f'{genome}_rmsk.txt.gz'
     final_name = f'{genome}_genes_tes.glb'
@@ -72,7 +75,7 @@ def make_genes_tes(genome, log):
         added += 1
 
         p.update(idx)
-    print('\nAdded {:,} features'.format(added))
+    print(f'\nAdded {added:,} features')
 
     print('Adding Gencode exons')
     added = 0

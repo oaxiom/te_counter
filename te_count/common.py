@@ -1,7 +1,7 @@
 
 import sys
 
-valid_assemblies = {'mm10', 'hg38'}
+valid_assemblies = {'mm10', 'hg38', 'macFas5'}
 valid_modes = {'genes_tes', 'enhancers', 'custom', 'snrnps'}
 
 def print_genomes(log=None):
