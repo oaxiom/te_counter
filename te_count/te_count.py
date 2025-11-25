@@ -5,6 +5,7 @@ A counter for various genome features in a range of data.
 '''
 
 import sys, os, argparse, logging, random, threading, time
+import gzip
 from collections import defaultdict
 from operator import itemgetter
 from . import miniglbase # miniglbase namespace mangling!
@@ -379,7 +380,7 @@ class measureTE:
                     # I guess this is due to sections with large number of erroneous reads?
                     # Hence only save when a bundle is actually full up.
                     bundle_name = f'tmp.{self.random_number}.{bundle_idx:05d}.{label}.bun'
-                    filehandle = open(bundle_name, 'w')
+                    filehandle = gzip.open(bundle_name, 'wt')
                     bundle_save_status[bundle_name] = False
                     save_thread = threading.Thread(target=save_bundle, args=(umis, filehandle, bundle_name, bundle_save_status))
                     save_thread.start()
@@ -478,7 +479,7 @@ class measureTE:
         # Save the final bundle
         if len(umis) > 0:
             bundle_name = f'tmp.{self.random_number}.{bundle_idx:05d}.{label}.bun'
-            filehandle = open(bundle_name, 'w')
+            filehandle = gzip.open(bundle_name, 'wt')
             bundle_save_status[bundle_name] = False # Although this one is not threaded.
             bname = save_bundle(umis, filehandle, bundle_name, bundle_save_status)
             log.info(f'  Saved Bundle {bname}')
@@ -507,12 +508,12 @@ class measureTE:
 
         # Open all the bundles;
         for b in bundles:
-            bundle_handles[b] = {'oh': open(b, 'r'), 'line': None, 'BC': None}
+            bundle_handles[b] = {'oh': gzip.open(b, 'r'), 'line': None, 'BC': None}
             # Populate the start
             bundle_handles[b]['line'] = next(bundle_handles[b]['oh']).strip().split()
             bundle_handles[b]['BC'] = int(bundle_handles[b]['line'][0])
 
-        output = open(f'tmp.{self.random_number}.merged.{label}.bun', 'w')
+        output = gzip.open(f'tmp.{self.random_number}.merged.{label}.bun', 'wt')
 
         umi_count = 0
 
@@ -589,7 +590,7 @@ class measureTE:
         for feature in self_genome_linearData:
             loc_lookups.append((feature['loc']['left'], feature['loc']['right']))
 
-        umis = open(f'tmp.{self.random_number}.merged.{label}.bun', 'r')
+        umis = gzip.open(f'tmp.{self.random_number}.merged.{label}.bun', 'rt')
 
         for umi in umis:
             umi = umi.strip().split('\t')
