@@ -508,7 +508,7 @@ class measureTE:
 
         # Open all the bundles;
         for b in bundles:
-            bundle_handles[b] = {'oh': gzip.open(b, 'r'), 'line': None, 'BC': None}
+            bundle_handles[b] = {'oh': gzip.open(b, 'rt'), 'line': None, 'BC': None}
             # Populate the start
             bundle_handles[b]['line'] = next(bundle_handles[b]['oh']).strip().split()
             bundle_handles[b]['BC'] = int(bundle_handles[b]['line'][0])
@@ -594,6 +594,7 @@ class measureTE:
 
         for umi in umis:
             umi = umi.strip().split('\t')
+
             umi[0] = int(umi[0])
             #print(umi)
 
