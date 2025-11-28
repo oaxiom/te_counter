@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+
+'''
+
+Fix barcodes for a BAM file for some metric;
+
+'''
+
+import sys, os, argparse, logging
+import pysam
+
+#script_path = os.path.dirname(os.path.realpath(__file__))
+#sys.path.append(os.path.join(script_path, '../'))
+#import te_count
+
+# Command-line options;
+def prepare_parser():
+    exmp = 'Example usage: fix_barcodes -i in.bam -o out.bam -w whitelist'
+
+    description = ('Fix barcodes in a BAM file using the provided whitelist. Add a CB code; Assumes the BAM'
+                   'file has been output from something like STARsolo with one read per line and a CR tag;')
+
+    parser = argparse.ArgumentParser(prog='te_count', description=description, epilog=exmp)
+
+    # Optional:
+    optional = parser._action_groups.pop()
+
+    required = parser.add_argument_group('required arguments')
+
+    required.add_argument('-i', '--inbam', nargs=1, required=True, help='the BAM alignment file containing the reads')
+    required.add_argument('-o', '--outbam', nargs=1, required=True, help='the BAM file to save the genes and count data to')
+    required.add_argument('-w', '--whitelist', nargs=1, required=True, help='A whitelist of barcodes')
+
+    parser._action_groups.append(optional)
+
+    logging.basicConfig(level=logging.DEBUG,
+                    format='%(levelname)-8s: %(message)s',
+                    datefmt='%m-%d %H:%M')
+
+    parser.log = logging.getLogger('fix_barcodes')
+
+    return parser
+
+def main():
+    assert sys.version_info >= (3, 8), 'Python >=3.8 is required'
+
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    parser = prepare_parser()
+    args = parser.parse_args()
+
+    log = parser.log
+
+    print(args)
+
+    log.info('Arguments:')
+    log.info('  inbam: %s' % args.inbam[0])
+    log.info('  outbam: %s' % args.outbam[0])
+    log.info('  whitelist: {0} (no default)'.format(args.whitelist[0]))
+
+    with open(args.whitelist[0], 'rt') as w:
+        whitelist = {l.strip() for l in w}
+
+    log.info(f'Found {len(whitelist):,} barcodes')
+
+    barcodes_searched_memo = {}
+
+    _twoN_rejected = 0
+    _rescued_oneN_read = 0
+    _failed_to_rescue_oneN_read = 0
+    _read_written = 0
+
+    with pysam.AlignmentFile(args.inbam[0], 'r') as inBAM:
+        with pysam.AlignmentFile(args.outbam[0], 'wb', template=inBAM) as outBAM:
+            for idx, read in enumerate(inBAM.fetch(until_eof=True)):
+                if idx % 1e6 == 0:
+                    log.info('Processed {:,} reads'.format(idx))
+
+                CR = read.get_tag('CR')
+                CB = None
+
+                # Simple rejections, e.g. two N
+                if 'N' in CR:
+                    if CR.count('N') >= 2:
+                        _twoN_rejected += 1
+                        continue
+                    # rescue one N read:
+                    for atcg in ('A', 'C', 'T', 'G'):
+                        searchCR = CR.replace('N', atcg)
+                        if searchCR in whitelist:
+                            CB = searchCR
+                            _rescued_oneN_read += 1
+                            break
+                    else:
+                        _failed_to_rescue_oneN_read += 1
+
+                elif CR in whitelist:
+                    CB = CR
+
+                else: # check for 1 bp mismatch
+                    pass
+
+                if CB:
+                    read.set_tag('CB', CB)
+                    outBAM.write(read)
+                    _read_written += 1
+
+    log.info('Stats:')
+    log.info(f'  Total processed reads        : {idx:,}')
+    log.info(f'  Two N rejected reads         : {_twoN_rejected:,}')
+    log.info(f'  Rescued one N read           : {_rescued_oneN_read:,}')
+    log.info(f'  Failed to rescue one N read  : {_failed_to_rescue_oneN_read:,}')
+    log.info(f'  Reads not rescued            : {idx-_read_written:,}')
+
+    log.info(f'  Reads written                : {_read_written:,}')
+    return
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.stderr.write("User interrupt\n")
+        sys.exit(0)
