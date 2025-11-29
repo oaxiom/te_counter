@@ -8,6 +8,7 @@ Fix barcodes for a BAM file for some metric;
 
 import sys, os, argparse, logging
 import pysam
+import itertools
 
 #script_path = os.path.dirname(os.path.realpath(__file__))
 #sys.path.append(os.path.join(script_path, '../'))
@@ -41,6 +42,11 @@ def prepare_parser():
 
     return parser
 
+
+def one_bp_mismatch(motif, alphabet={"A", "C", "G", "T"}):
+    return list(set(itertools.chain.from_iterable(
+        [[motif[:pos] + nucleotide + motif[pos + 1:] for nucleotide in alphabet] for pos in range(len(motif))])))
+
 def main():
     assert sys.version_info >= (3, 8), 'Python >=3.8 is required'
 
@@ -55,7 +61,7 @@ def main():
     log.info('Arguments:')
     log.info('  inbam: %s' % args.inbam[0])
     log.info('  outbam: %s' % args.outbam[0])
-    log.info('  whitelist: {0} (no default)'.format(args.whitelist[0]))
+    log.info('  whitelist: {0}'.format(args.whitelist[0]))
 
     with open(args.whitelist[0], 'rt') as w:
         whitelist = {l.strip() for l in w}
@@ -68,6 +74,7 @@ def main():
     _rescued_oneN_read = 0
     _failed_to_rescue_oneN_read = 0
     _read_written = 0
+    _rescued_one_bp_mismatch = 0
 
     with pysam.AlignmentFile(args.inbam[0], 'r') as inBAM:
         with pysam.AlignmentFile(args.outbam[0], 'wb', template=inBAM) as outBAM:
@@ -97,7 +104,12 @@ def main():
                     CB = CR
 
                 else: # check for 1 bp mismatch
-                    pass
+                    mismatches = one_bp_mismatch(CR)
+                    for m in mismatches:
+                        if m in whitelist:
+                            CB = CR
+                            _rescued_one_bp_mismatch += 1
+                            break
 
                 if CB:
                     read.set_tag('CB', CB)
@@ -105,13 +117,14 @@ def main():
                     _read_written += 1
 
     log.info('Stats:')
-    log.info(f'  Total processed reads        : {idx:,}')
-    log.info(f'  Two N rejected reads         : {_twoN_rejected:,}')
-    log.info(f'  Rescued one N read           : {_rescued_oneN_read:,}')
-    log.info(f'  Failed to rescue one N read  : {_failed_to_rescue_oneN_read:,}')
-    log.info(f'  Reads not rescued            : {idx-_read_written:,}')
+    log.info(f'  Total processed reads             : {idx:,}')
+    log.info(f'  Two N rejected reads              : {_twoN_rejected:,}')
+    log.info(f'  Rescued one N read                : {_rescued_oneN_read:,}')
+    log.info(f'  Failed to rescue one N read       : {_failed_to_rescue_oneN_read:,}')
+    log.info(f'  Rescued barcode with 1 bp mismatch: {_rescued_one_bp_mismatch:,}')
+    log.info(f'  Reads not rescued                 : {idx-_read_written:,}')
 
-    log.info(f'  Reads written                : {_read_written:,}')
+    log.info(f'  Reads written                     : {_read_written:,}')
     return
 
 if __name__ == '__main__':
