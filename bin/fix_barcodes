@@ -56,8 +56,6 @@ def main():
 
     log = parser.log
 
-    print(args)
-
     log.info('Arguments:')
     log.info('  inbam: %s' % args.inbam[0])
     log.info('  outbam: %s' % args.outbam[0])
@@ -75,6 +73,10 @@ def main():
     _failed_to_rescue_oneN_read = 0
     _read_written = 0
     _rescued_one_bp_mismatch = 0
+    _umi_mismatch_fixed = 0
+
+    lastCB = None
+    lastUMI = None
 
     with pysam.AlignmentFile(args.inbam[0], 'r') as inBAM:
         with pysam.AlignmentFile(args.outbam[0], 'wb', template=inBAM) as outBAM:
@@ -84,6 +86,8 @@ def main():
 
                 CR = read.get_tag('CR')
                 CB = None
+                UR = read.get_tag('UR') # We have to get, even if we don't need it;
+                UB = None
 
                 # Simple rejections, e.g. two N
                 if 'N' in CR:
@@ -104,27 +108,58 @@ def main():
                     CB = CR
 
                 else: # check for 1 bp mismatch
-                    mismatches = one_bp_mismatch(CR)
-                    for m in mismatches:
+                    if CR in barcodes_searched_memo:
+                        CB = CR # Already seen, use the memoised one;
+
+                    for m in one_bp_mismatch(CR):
                         if m in whitelist:
-                            CB = CR
+                            CB = m
                             _rescued_one_bp_mismatch += 1
+                            barcodes_searched_memo[CR] = CB
                             break
 
                 if CB:
+                    # Only correct UMI if we already fixed the CB
+                    # correct UMI, most mismatches can be corrected if the previous UMI Is the same as this one;
+                    # Requires a coord sorted BAM
+                    # Could cause an error if the first seen UMI is the real one?
+                    # In the later case it would just change all UMIs to the erroneous one, and the efect would be the same;
+                    if lastCB == CB:
+                        # Only do if we are on the same barcode;
+                        if lastUMI:
+                            if UR == lastUMI:
+                                UB = UR
+                            else:
+                                # on bp mismatch;
+                                for m in one_bp_mismatch(UR):
+                                    if m == lastUMI:
+                                        UB = m
+                                        _umi_mismatch_fixed += 1
+                                        break
+                        else:
+                            UB = UR
+                    else:
+                        UB = UR
+
+                    # All valid
                     read.set_tag('CB', CB)
+                    read.set_tag('UB', UB)
                     outBAM.write(read)
                     _read_written += 1
+                    lastCB = CB
+                    lastUMI = UB
 
     log.info('Stats:')
-    log.info(f'  Total processed reads             : {idx:,}')
-    log.info(f'  Two N rejected reads              : {_twoN_rejected:,}')
-    log.info(f'  Rescued one N read                : {_rescued_oneN_read:,}')
-    log.info(f'  Failed to rescue one N read       : {_failed_to_rescue_oneN_read:,}')
-    log.info(f'  Rescued barcode with 1 bp mismatch: {_rescued_one_bp_mismatch:,}')
-    log.info(f'  Reads not rescued                 : {idx-_read_written:,}')
-
-    log.info(f'  Reads written                     : {_read_written:,}')
+    log.info(f'  Total processed reads              : {idx:,}')
+    log.info(f'  Two N rejected reads               : {_twoN_rejected:,}')
+    log.info(f'  Rescued one N read                 : {_rescued_oneN_read:,}')
+    log.info(f'  Failed to rescue one N read        : {_failed_to_rescue_oneN_read:,}')
+    log.info(f'  Rescued barcode with 1 bp mismatch : {_rescued_one_bp_mismatch:,}')
+    log.info(f'  Reads not rescued                  : {idx-_read_written:,}')
+    log.info(f'  -----------------------------------')
+    log.info(f'  UMIs fixed by matching previous UMI: {_umi_mismatch_fixed:,}')
+    log.info(f'  -----------------------------------')
+    log.info(f'  Reads written                      : {_read_written:,}')
     return
 
 if __name__ == '__main__':
