@@ -306,14 +306,14 @@ class measureTE:
         maxcells:int = None):
         '''
         **Purpose**
-            Load in a BAMSE file, for single cell data, and look for the CR and UMI tags.
+            Load in a BAMSE file, for single cell data, and look for the CR/CB and UMI (UR/UB) tags.
 
         **Arguments**
             filename (Required)
                 filename of the BAMSE file
 
-            UMIS (OPtional, default=True)
-                Whether to get the UMIs out of UR tag
+            UMIs (Optional, default=True)
+                Whether to get the UMIs out of UR/UB tag
 
             whitelist (Required)
                 perform whitlisting on the barcodes;
@@ -504,6 +504,8 @@ class measureTE:
         barcodes_to_do = sorted(list(barcodes_to_do), reverse=True)
         self.barcodes = {} # Reset barcodes so that it reports number of UMIs mapping to features, not just raw UMI counts;
 
+        log.info('  Kept the best raw barcodes')
+
         bundle_handles = {}
 
         # Open all the bundles;
@@ -516,6 +518,8 @@ class measureTE:
         output = gzip.open(f'tmp.{self.random_number}.merged.{label}.bun', 'wt')
 
         umi_count = 0
+        total_number_of_reads = idx
+        idx = 0
 
         while barcodes_to_do:
             current_barcode = barcodes_to_do.pop()
@@ -528,7 +532,7 @@ class measureTE:
             for b in bundle_handles:
                 while bundle_handles[b]['BC'] <= current_barcode:
                     if not bundle_handles[b]['oh']:
-                        break # Already been consumed
+                        break # Already consumed
 
                     try:
                         bundle_handles[b]['line'] = next(bundle_handles[b]['oh']).strip().split()
@@ -546,14 +550,12 @@ class measureTE:
             umi_count += len(this_barcode_data)
             #print(this_barcode_data)
             # Process the reads for this barcode and save to a file
+            barcode = current_barcode
             for read in this_barcode_data:
-                barcode = current_barcode
-                line = read
-
-                if (barcode, line[1]) not in umis:
-                    umis[(barcode, line[1])] = set(line[2:])
+                if (barcode, read[1]) not in umis:
+                    umis[(barcode, read[1])] = set(read[2:])
                 else:
-                    umis[(barcode, line[1])] | set(line[2:])
+                    umis[(barcode, read[1])] | set(read[2:])
 
             # This barcode is done, save the data to a new bundle;
             if umis:
@@ -561,6 +563,10 @@ class measureTE:
                     output.write(f"{umi[0]}\t{umi[1]}\t")
                     output.write('\t'.join([str(i) for i in umis[umi]]))
                     output.write('\n')
+
+            idx += 1
+            if idx % 1e3 == 0:
+                log.info('  Processed {:,} barcodes'.format(idx))
 
         output.close()
 
@@ -571,7 +577,7 @@ class measureTE:
         log.info(f'  Cleaned up bundles')
 
         __total_valid_reads = umi_count
-        log.info(f'  Preserved {__total_valid_reads:,}/{idx:,} ({__total_valid_reads/idx*100:.1f}%) of the reads')
+        log.info(f'  Preserved {__total_valid_reads:,}/{total_number_of_reads:,} ({__total_valid_reads/total_number_of_reads*100:.1f}%) of the reads')
 
         del barcodes_to_do
 
@@ -695,7 +701,7 @@ class measureTE:
         # This number is wrong. Seems there are a few leaky rejected reads not recorded.
         __total_rejected_reads = __already_seen_umicb + __quality_trimmed +__read_qc_fail + __invalid_barcode_reads
 
-        log.info('  In the total pipeling, processed {:,} SE reads'.format(idx))
+        log.info('  In the total pipeling, processed {:,} SE reads'.format(total_number_of_reads))
         log.info('  {:,} invalid barcode reads'.format(__invalid_barcode_reads))
         log.info('  {:,} UMI-CB combinations were seen multiple times and removed'.format(__already_seen_umicb))
         log.info('  {:,} Read quality is too low (<{})'.format(__quality_trimmed, self.quality_threshold))
