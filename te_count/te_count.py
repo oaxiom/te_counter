@@ -510,7 +510,7 @@ class measureTE:
 
         # Open all the bundles;
         for b in bundles:
-            bundle_handles[b] = {'oh': gzip.open(b, 'rt'), 'line': None, 'BC': None}
+            bundle_handles[b] = {'oh': gzip.open(b, 'rt'), 'BC': None}
             # Populate the start
             bundle_handles[b]['line'] = next(bundle_handles[b]['oh']).strip().split()
             bundle_handles[b]['BC'] = int(bundle_handles[b]['line'][0])
@@ -535,10 +535,10 @@ class measureTE:
                         break # Already consumed
 
                     try:
-                        bundle_handles[b]['line'] = next(bundle_handles[b]['oh']).strip().split()
-                        bundle_handles[b]['BC'] = int(bundle_handles[b]['line'][0])
+                        line = next(bundle_handles[b]['oh']).strip().split()
+                        bundle_handles[b]['BC'] = int(line[0])
                         if bundle_handles[b]['BC'] == current_barcode:
-                            this_barcode_data.append(bundle_handles[b]['line'])
+                            this_barcode_data.append(line)
 
                             #print(bundle_handles[b]['line']) 6 835 392 052
 
@@ -550,12 +550,11 @@ class measureTE:
             umi_count += len(this_barcode_data)
             #print(this_barcode_data)
             # Process the reads for this barcode and save to a file
-            barcode = current_barcode
             for read in this_barcode_data:
-                if (barcode, read[1]) not in umis:
-                    umis[(barcode, read[1])] = set(read[2:])
+                if (current_barcode, read[1]) not in umis:
+                    umis[(current_barcode, read[1])] = set(read[2:])
                 else:
-                    umis[(barcode, read[1])] | set(read[2:])
+                    umis[(current_barcode, read[1])] | set(read[2:])
 
             # This barcode is done, save the data to a new bundle;
             if umis:
