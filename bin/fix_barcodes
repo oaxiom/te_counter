@@ -43,9 +43,9 @@ def prepare_parser():
     return parser
 
 
-def one_bp_mismatch(motif, alphabet={"A", "C", "G", "T"}):
+def one_bp_mismatch(motif):
     return list(set(itertools.chain.from_iterable(
-        [[motif[:pos] + nucleotide + motif[pos + 1:] for nucleotide in alphabet] for pos in range(len(motif))])))
+        [[motif[:pos] + nucleotide + motif[pos + 1:] for nucleotide in {"A", "C", "G", "T"}] for pos in range(len(motif))])))
 
 def main():
     assert sys.version_info >= (3, 8), 'Python >=3.8 is required'
