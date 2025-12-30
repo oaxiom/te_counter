@@ -693,6 +693,7 @@ class measureTE:
                     if loc2_rite >= locG_l and loc2_left <= locG_r: # Any 1 bp overlap...
                         result.append(self_genome_linearData[index])
 
+                ####### Work out the splice status
                 read_splice_status = None
 
                 if velocity:
@@ -727,6 +728,11 @@ class measureTE:
                                 read_splice_status = 'unspliced'
                                 __exon_but_unspliced_read += 1
                                 __unspliced_read += 1
+                        else:
+                            # Couldn't find a completely enclosing exon;
+                            read_splice_status = 'unspliced'
+                            __exon_but_unspliced_read += 1
+                            __unspliced_read += 1
 
                     elif result_velocity:
                         # We hit a transcript, but not an exon;
@@ -738,7 +744,11 @@ class measureTE:
                     else: # Don't know, I give up;
                         read_splice_status = None
                         if result:
-                            print(f'Bad hit: {result}')
+                            print(f'Bad hit1: {result}')
+
+                    if not read_splice_status:
+                        if result:
+                            print(f'Bad hit2: {result}')
 
                 if not result or result_velocity:
                     continue
