@@ -6,7 +6,7 @@ Fix barcodes for a BAM file for some metric;
 
 '''
 
-import sys, os, argparse, logging
+import sys, os, argparse, logging, time
 import pysam
 import itertools
 
@@ -45,10 +45,16 @@ def prepare_parser():
 
 def one_bp_mismatch(motif):
     return list(set(itertools.chain.from_iterable(
-        [[motif[:pos] + nucleotide + motif[pos + 1:] for nucleotide in {"A", "C", "G", "T"}] for pos in range(len(motif))])))
+        [["".join([motif[:pos], nucleotide, motif[pos+1:]]) for nucleotide in {"A", "C", "G", "T"}] for pos in range(len(motif))])))
+
+def one_bp_mismatchB(motif):
+    return list(set(itertools.chain.from_iterable(
+        [[motif[:pos] + nucleotide + motif[pos+1:] for nucleotide in {"A", "C", "G", "T"}] for pos in range(len(motif))])))
 
 def main():
     assert sys.version_info >= (3, 8), 'Python >=3.8 is required'
+
+    s = time.time()
 
     script_path = os.path.dirname(os.path.realpath(__file__))
     parser = prepare_parser()
@@ -131,6 +137,7 @@ def main():
                                 UB = UR
                             else:
                                 # on bp mismatch;
+                                #print(one_bp_mismatch(UR))
                                 for m in one_bp_mismatch(UR):
                                     if m == lastUMI:
                                         UB = m
@@ -160,6 +167,10 @@ def main():
     log.info(f'  UMIs fixed by matching previous UMI: {_umi_mismatch_fixed:,}')
     log.info(f'  -----------------------------------')
     log.info(f'  Reads written                      : {_read_written:,}')
+
+    e = time.time()
+    log.info(f'Took {e-s:.2f}s')
+
     return
 
 if __name__ == '__main__':

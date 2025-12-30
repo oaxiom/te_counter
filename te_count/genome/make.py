@@ -34,6 +34,7 @@ def make_genes_tes(genome, log):
 
     repeat_name = f'{genome}_rmsk.txt.gz'
     final_name = f'{genome}_genes_tes.glb'
+    final_name_velocyto = f'{genome}_genes_tes_velocyto.glb'
 
     script_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -83,10 +84,21 @@ def make_genes_tes(genome, log):
         p.update(idx)
     print(f'\nAdded {added:,} features')
 
+    velocyto_transcripts = []
+
     print('Adding Gencode exons')
     added = 0
     p = miniglbase.progressbar(len(gencode))
     for idx, item in enumerate(gencode):
+        if item['feature'] = 'transcript': # add to the velocyto for splicing estimates;
+            newentry = {'loc': item['loc'],
+                        'strand': item['strand'],
+                        'name': gene_name,
+                        'type': item[gene_biotype_label],
+                        'ensg': item['gene_id'].split('.')[0],
+                        }
+            velocyto_transcripts.append(newentry)
+
         if item['feature'] != 'exon': # i.e. only include in the annotation if it is an exon
             continue
 
@@ -123,6 +135,10 @@ def make_genes_tes(genome, log):
     gl = miniglbase.genelist()
     gl.load_list(newl)
     gl.save('{0}/{1}'.format(script_path, final_name))
+
+    gl = miniglbase.genelist()
+    gl.load_list(velocyto_transcripts)
+    gl.save('{0}/{1}'.format(script_path, final_name_velocyto)))
 
     return True
 
