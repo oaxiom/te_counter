@@ -82,6 +82,8 @@ def make_genes_tes(genome, log):
         added += 1
 
         p.update(idx)
+        if idx > 1000: break
+
     print(f'\nAdded {added:,} features')
 
     velocyto_transcripts = []
@@ -91,6 +93,11 @@ def make_genes_tes(genome, log):
     p = miniglbase.progressbar(len(gencode))
     for idx, item in enumerate(gencode):
         if item['feature'] == 'transcript': # add to the velocyto for splicing estimates;
+            if 'gene_name' in item:  # For macFas5 genome;
+                gene_name = item['gene_name']
+            else:
+                gene_name = item['gene_id']
+
             newentry = {'loc': item['loc'],
                         'strand': item['strand'],
                         'name': gene_name,
@@ -98,6 +105,7 @@ def make_genes_tes(genome, log):
                         'ensg': item['gene_id'].split('.')[0],
                         }
             velocyto_transcripts.append(newentry)
+            continue
 
         if item['feature'] != 'exon': # i.e. only include in the annotation if it is an exon
             continue
@@ -136,9 +144,10 @@ def make_genes_tes(genome, log):
     gl.load_list(newl)
     gl.save('{0}/{1}'.format(script_path, final_name))
 
-    print('\nAdded {:,} unspliced transcripts'.format(len(velocyto_transcripts)))
     gl = miniglbase.genelist()
     gl.load_list(velocyto_transcripts)
+    gl = gl.removeDuplicates('loc')
+    print('\nAdded {:,} unspliced transcripts'.format(len(velocyto_transcripts)))
     gl.save('{0}/{1}'.format(script_path, final_name_velocyto))
 
     return True
