@@ -34,6 +34,7 @@ class measureTE:
 
         self.genome = miniglbase.glload(self.genelist_glb_filename)
         self.all_feature_names = sorted(list(set(self.genome['ensg'])))
+        self.all_feature_names_set = set(self.genome['ensg'])
 
         if not velocity:
             return
@@ -364,6 +365,7 @@ class measureTE:
         __quality_trimmed = 0
         __read_qc_fail = 0
         __already_seen_umicb = 0
+        __spliced_read = 0
         __unspliced_read = 0
         __exon_but_unspliced_read = 0
         sam = pysam.AlignmentFile(filename, 'r')
@@ -614,8 +616,9 @@ class measureTE:
         # preprocess loc lookups
         self_genome_buckets = self.genome.buckets
         self_genome_linearData = self.genome.linearData
-        self_velocity_genome_buckets = self.velocity_genome.buckets
-        self_velocity_genome_linearData = self.velocity_genome.linearData
+        if velocity:
+            self_velocity_genome_buckets = self.velocity_genome.buckets
+            self_velocity_genome_linearData = self.velocity_genome.linearData
 
         loc_lookups = []
         for feature in self_genome_linearData:
@@ -646,8 +649,6 @@ class measureTE:
                 chrom = r[0]
                 if strand: loc_strand = r[1]
                 left, rite, spliced = c
-
-                print(c)
 
                 if chrom not in self_genome_buckets:
                     continue
@@ -692,6 +693,9 @@ class measureTE:
                     if loc2_rite >= locG_l and loc2_left <= locG_r: # Any 1 bp overlap...
                         result.append(self_genome_linearData[index])
 
+                if not result:
+                    continue
+
                 read_splice_status = None
 
                 if velocity:
@@ -706,6 +710,7 @@ class measureTE:
                     # need to work out the splice status here;
                     if spliced: # simplest case, it's a split read;
                         read_splice_status = 'spliced'
+                        __spliced_read += 1
 
                     elif result:
                         types = set([i['type'] for i in result])
@@ -715,17 +720,21 @@ class measureTE:
                             for hit in result:
                                 # I know it's a hit;
                                 # If any one read is contained, it's 'spliced'
-                                if hit['loc'].left <= left and right <= hit['loc'].right:
+                                if hit['loc'].left <= left and rite <= hit['loc'].right:
                                     # entirely contained, spliced
                                     read_splice_status = 'spliced'
+                                    __spliced_read += 1
+                                    break
                             else:
                                 # Couldn't find a completely enclosing exon;
                                 read_splice_status = 'unspliced'
                                 __exon_but_unspliced_read += 1
+                                __unspliced_read += 1
 
                     elif result_velocity:
                         # We hit a transcript, but not an exon;
                         # The velocity genome only contains transcripts, so must be an intron:
+                        # only protein_coding, lincRNA and lncRNA used in velocty genome;
                         read_splice_status = 'unspliced'
                         __unspliced_read += 1
 
@@ -733,72 +742,62 @@ class measureTE:
                         read_splice_status = None
                         print(f'Bad hit: {result}')
 
-                if result:
-                    # We are going to add to something:
-                    if barcode not in self.barcodes:
-                        self.barcodes[barcode] = 0
-                    self.barcodes[barcode] += 1
-                    # do the annotation so that a read only gets counted to a TE if it does not hit a gene:
-                    # This will currently allow 1 read to be counted twice if each edge is inside a different feature.
-                    # Is that wrong, or a reasonable compromise?
+                # We are going to add to something:
+                if barcode not in self.barcodes:
+                    self.barcodes[barcode] = 0
+                self.barcodes[barcode] += 1
+                # do the annotation so that a read only gets counted to a TE if it does not hit a gene:
+                # This will currently allow 1 read to be counted twice if each edge is inside a different feature.
+                # Is that wrong, or a reasonable compromise?
 
-                    result_hits = None
-                    types = set([i['type'] for i in result])
-                    ensgs = set([(i['ensg'], i['strand']) for i in result]) # only count 1 read to 1 gene
-                    if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
-                        for e in ensgs:
-                            # e[1] = strand Only collect gene results on the correct strand
-                            if strand and loc_strand != e[1]: # Don't count if antisense to an exon.
-                                continue
+                result_hits = None
+                types = set([i['type'] for i in result])
+                ensgs = set([(i['ensg'], i['strand']) for i in result]) # only count 1 read to 1 gene
+                if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
+                    for e in ensgs:
+                        # e[1] = strand Only collect gene results on the correct strand
+                        if strand and loc_strand != e[1]: # Don't count if antisense to an exon.
+                            continue
 
-                            if barcode not in final_results[e[0]]:
-                                final_results[e[0]][barcode] = 0
-                            final_results[e[0]][barcode] += 1
-                        result_hits = [e[0] for e in ensgs if e[1] == loc_strand]
-
-                    elif 'TE' in types:
-                        for e in ensgs: # Not in any other RNA, so okay to count as a TE
-                            if barcode not in final_results[e[0]]:
-                                final_results[e[0]][barcode] = 0
-                            final_results[e[0]][barcode] += 1
-                        result_hits = [e[0] for e in ensgs if e[1] == loc_strand]
-
-                    elif 'enhancer' in types:
-                        for e in ensgs: # Not in any other RNA, so okay to count as a enhancer
-                            if barcode not in final_results[e[0]]:
-                                final_results[e[0]][barcode] = 0
-                            final_results[e[0]][barcode] += 1
-                    else:
-                        continue  # Don't count the read to __read_assinged_to_feature
-
-                    __read_assinged_to_feature += 1
-                    #print()
-                elif result_velocity:
-                    # We don't store the use of the barcode here for statistics;
-                    # intronic read, so unspliced;
-                    __unspliced_read += 1
-                    # hit a transcript, if result == None then
-                    read_splice_status = 'unspliced'
-
-                    result_hits = None
-                    types = set([i['type'] for i in result])
-                    ensgs = set([(i['ensg'], i['strand']) for i in result]) # only count 1 read to 1 gene
-                    if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
-                        result_hits = [e[0] for e in ensgs if e[1] == loc_strand]
-
-                # Final spliced unspliced matrices;
-                if velocity and read_splice_status == 'spliced': # write out values;
-                    # spliced read;
-                    for hit in result_hits:
                         if barcode not in final_results[e[0]]:
-                            final_results_spliced[e[0]][barcode] = 0
-                        final_results_spliced[e[0]][barcode] += 1
+                            final_results[e[0]][barcode] = 0
+                        final_results[e[0]][barcode] += 1
+                    result_hits = [e[0] for e in ensgs if e[1] == loc_strand]
 
-                elif velocity and read_splice_status == 'unspliced': # unspliced read;
-                    for hit in result_hits:
+                elif 'TE' in types:
+                    for e in ensgs: # Not in any other RNA, so okay to count as a TE
                         if barcode not in final_results[e[0]]:
-                            final_results_unspliced[e[0]][barcode] = 0
-                        final_results_unspliced[e[0]][barcode] += 1
+                            final_results[e[0]][barcode] = 0
+                        final_results[e[0]][barcode] += 1
+                    result_hits = [e[0] for e in ensgs if e[1] == loc_strand]
+
+                elif 'enhancer' in types:
+                    for e in ensgs: # Not in any other RNA, so okay to count as a enhancer
+                        if barcode not in final_results[e[0]]:
+                            final_results[e[0]][barcode] = 0
+                        final_results[e[0]][barcode] += 1
+                else:
+                    continue  # Don't count the read to __read_assinged_to_feature
+
+                __read_assinged_to_feature += 1
+
+            # Final spliced unspliced matrices;
+            if velocity and read_splice_status == 'spliced': # write out values;
+                # spliced read;
+                for e in set([(i['ensg'], i['strand']) for i in result]):
+                    if barcode not in final_results_spliced[e[0]]:
+                        final_results_spliced[e[0]][barcode] = 0
+                    final_results_spliced[e[0]][barcode] += 1
+
+            elif velocity and read_splice_status == 'unspliced': # unspliced read;
+                for e in set([(i['ensg'], i['strand']) for i in result_velocity]):
+                    if e[0] not in self.all_feature_names_set:
+                        # Occasioanlly some mismatches in the biotype of the annotated genes.
+                        # Always default to the one in the main assembly;
+                        continue
+                    if barcode not in final_results_unspliced[e[0]]:
+                        final_results_unspliced[e[0]][barcode] = 0
+                    final_results_unspliced[e[0]][barcode] += 1
 
         umis.close()
         sam.close()
@@ -817,8 +816,13 @@ class measureTE:
         log.info('  Assigned {:,} ({:.1f}%) of total valid reads to features'.format(__read_assinged_to_feature, ((__read_assinged_to_feature/__total_valid_reads) * 100.0))) # add per cents here;
 
         if velocity:
-            log.info('  Velocity exon, but unspliced reads {__exon_but_unspliced_read:,}')
-            log.info('  Velocity unspliced reads {__unspliced_read:,}')
+            total_reads_for_velocity = __spliced_read + __unspliced_read
+            preads = (__exon_but_unspliced_read/total_reads_for_velocity) * 100.0
+            log.info(f'  Velocity exon, but unspliced reads {__exon_but_unspliced_read:,} ({preads:.1f}%)')
+            ureads = (__spliced_read / total_reads_for_velocity) *100.0
+            log.info(f'  Velocity spliced reads {__spliced_read:,} ({ureads:.1f}%)')
+            ureads = (__unspliced_read / total_reads_for_velocity) *100.0
+            log.info(f'  Velocity unspliced reads {__unspliced_read:,} ({ureads:.1f}%)')
 
         self.total_reads = idx
 

@@ -93,6 +93,12 @@ def make_genes_tes(genome, log):
     p = miniglbase.progressbar(len(gencode))
     for idx, item in enumerate(gencode):
         if item['feature'] == 'transcript': # add to the velocyto for splicing estimates;
+            if item['loc']['chr'] not in chr_set:
+                continue
+
+            if item[gene_biotype_label] not in ('protein_coding', 'lncRNA', 'lincRNA'):
+                continue
+
             if 'gene_name' in item:  # For macFas5 genome;
                 gene_name = item['gene_name']
             else:

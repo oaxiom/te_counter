@@ -75,7 +75,7 @@ def main():
         log.info('  maxcells: {0} (default is 10000)'.format(args.maxcells))
         log.info('  No UMI: {0} (default is False)'.format(args.noumi))
         log.info('  Whitelist: {0} (no default)'.format(args.w))
-        log.info('  Generate Velocity: {0} (defaulf is False)'.format(args.velocity))
+        log.info('  Generate Velocity: {0} (default is False)'.format(args.velocity))
 
     mte = te_count.measureTE(sys.argv[0], args.qual)
 
@@ -118,7 +118,7 @@ def main():
                 velocity=args.velocity)
 
             mte.sc_save_result(result, args.outtsv[0], maxcells=args.maxcells, log=log)
-            if velocity:
+            if args.velocity:
                 mte.sc_save_result(spliced, args.outtsv[0].replace('.tsv', '.spliced.tsv'), maxcells=args.maxcells, log=log)
                 mte.sc_save_result(unspliced, args.outtsv[0].replace('.tsv', '.unspliced.tsv'), maxcells=args.maxcells, log=log)
         else:
