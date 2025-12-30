@@ -12,6 +12,7 @@ from . import config
 from . import utils
 from .location import location
 from .base_genelist import _base_genelist
+from .progress import progressbar
 
 class genelist(_base_genelist):
     """
@@ -401,7 +402,15 @@ class genelist(_base_genelist):
         """
         return chromosome in self.dataByChr
 
-    def _findDataByKeyLazy(self, key, value):    # override????? surely find?
+    def _findAllLabelsByKey(self, key: str) -> list:
+        """
+        (Internal)
+        Returns a 1D list of all the values under Key.
+        Most useful for things like geneList["ensg"]
+        """
+        return [x[key] for x in self.linearData]
+
+    def _findDataByKeyLazy(self, key, value):
         """
         (Internal)
 
@@ -413,7 +422,7 @@ class genelist(_base_genelist):
             return self.linearData[min(self.qkeyfind[key][value])]
         return None # not found;
 
-    def _findDataByKeyGreedy(self, key, value):    # override????? surely finditer?
+    def _findDataByKeyGreedy(self, key, value):
         """
         finds all - returns a list
         """
@@ -424,48 +433,7 @@ class genelist(_base_genelist):
 
         if item_indeces:
             return([self.linearData[i] for i in item_indeces])
-        return(None)
-
-    def _findAllLabelsByKey(self, key):
-        """
-        (Internal)
-        Returns a 1D list of all the values under Key.
-        Most useful for things like geneList["Symbol"]
-        geneList["entrez"]
-        """
-        return([x[key] for x in self.linearData])
-
-    def _findByLabel(self, key, value):
-        """
-        (Internal)
-        key is the key to search with
-        toFind is some sort value to compare
-
-        There is a subtle problem here if the user tries to find a list or other non-hashable
-        object. But then It would be kind of wierd to do that...
-
-        (This is used in at least draw._heatmap_and_plot())
-
-        This version is deprectaed. The official internal methods are:
-        _findDataByKeyLazy|Greedy()
-        """
-        return(self._findDataByKeyLazy(key, value)) # not found;
-
-    def _findByLoc(self, key, loc):
-        """
-        (internal)
-        coords should be in formal format, chrX:int(left)-int(right)
-        key is unused
-
-        lazy.
-        """
-        ret = []
-
-        if self.isChromosomeAvailable(loc["chr"]):
-            for item in self.dataByChr[loc["chr"]]:
-                if utils.qcollide(loc["left"], loc["right"], item[key]["left"], item[key]["right"]):
-                    ret.append(item)
-        return(ret)
+        return None
 
     def saveTSV(self, filename=None, **kargs):
         """
@@ -883,7 +851,7 @@ class genelist(_base_genelist):
         config.log.info("getRowsByKey: Found %s items" % len(newl))
         return(newl)
 
-    def map(self, genelist=None, peaklist=None, microarray=None, genome=None, key=None,
+    def map(self, genelist=None, genome=None, key=None,
         greedy=True, logic="and", silent=False, **kargs):
         """
         **Purpose**
@@ -961,8 +929,9 @@ class genelist(_base_genelist):
             right hand side of the function.
 
         """
-        valid_args = ("genelist", "peaklist", "microarray", "key",
+        valid_args = ("genelist", "peaklist", "key",
             "image_filename", "title", "venn_proportional", "greedy")
+
         for k in kargs:
             if not k in valid_args:
                 raise ArgumentError(self.map, k)
@@ -972,14 +941,10 @@ class genelist(_base_genelist):
         if repr(genelist) == "glbase.delayedlist": # delayedlists will fail an assertion
             gene_list = genelist
         else:
-            assert genome or genelist or peaklist or microarray, "map(): No valid genelist specified"
+            assert genome or genelist, "map(): No valid genelist specified"
 
         if genelist:
             gene_list = genelist
-        if peaklist:
-            gene_list = peaklist
-        if microarray:
-            gene_list = microarray
         if genome:
             gene_list = genome
 
@@ -993,7 +958,7 @@ class genelist(_base_genelist):
         p = progressbar(len(gene_list)) # leave as len() for compatability with delayedlists
         # speed up with a triangular search?
         newl = gene_list.shallowcopy()
-        if repr(genelist) == "glbase.delayedlist": # Special exception for delayedlists, need to convert to vanilla genelist:
+        if repr(gene_list) == "glbase.delayedlist": # Special exception for delayedlists, need to convert to vanilla genelist:
             newl = Genelist()
             newl.name = gene_list.name
 
@@ -1205,13 +1170,6 @@ class genelist(_base_genelist):
         config.log.info("pointRight genelist %s" % (self.name))
         return(newl)
 
-    def _collectIdenticalKeys(self, gene_list):
-        """
-        (Internal)
-        What it says, returns a list of valid keys in common between this list and gene_list
-        """
-        return(list(set(self.keys()) & set(gene_list.keys())))
-
     def removeDuplicatesByLoc(self, mode, key="loc", delta=200):
         """
         **Purpose**
@@ -1394,35 +1352,6 @@ class genelist(_base_genelist):
         newl._optimiseData()
 
         config.log.info("removeDuplicates(): %s duplicates, list now %s items long" % (len(self) - len(newl), len(newl)))
-        return(newl)
-
-    def removeExactDuplicates(self):
-        """
-        **Purpose**
-            removes exact duplicates where all of the keys match. Keeping the first
-            found copy
-
-        **Returns**
-            The new list with the duplicates removed.
-        """
-        newl = self.shallowcopy()
-        newl.linearData = []
-        count = 0
-
-        # TODO: Could be done with: list(map(dict, frozenset(frozenset(i.items()) for i in marked_for_deletion)))
-        # Lazy at the moment, this function is very rarely used. Better to speed up *ByKey()
-        unq = set()
-        kord = list(self.linearData[0].keys())# fix the key order
-
-        for item in self.linearData:
-            valstr = "".join(str(item[k]) for k in kord)
-            if valstr not in unq:
-                unq.add(valstr)
-                newl.linearData.append(item) # add first item found
-
-        newl._optimiseData()
-
-        config.log.info("removeExactDuplicates(): %s exact duplicates" % (len(self) - len(newl)))
         return(newl)
 
     def load_list(self, list_to_load, name=False):

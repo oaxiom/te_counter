@@ -308,7 +308,8 @@ class measureTE:
         strand:bool = False,
         log=None,
         label:str = None,
-        maxcells:int = None):
+        maxcells:int = None
+                       velocity: bool = False):
         '''
         **Purpose**
             Load in a BAMSE file, for single cell data, and look for the CR/CB and UMI (UR/UB) tags.
@@ -326,6 +327,8 @@ class measureTE:
             label (Required)
                 label for the sample output
 
+            velocity (Optional, default=False)
+                calculate spliced and unspliced matrices
         '''
         assert filename, 'You must specify a filename'
         assert whitelistfilename, 'You must specify a whitelist of barcodes'
@@ -592,6 +595,9 @@ class measureTE:
         self.load_genome()
 
         final_results = {i: {} for i in self.all_feature_names} # pseudo-sparse array
+        if velocity:
+            final_results_spliced = {i: {} for i in self.all_feature_names}
+            final_results_unspliced = {i: {} for i in self.all_feature_names}
 
         # preprocess loc lookups
         self_genome_buckets = self.genome.buckets
@@ -659,6 +665,18 @@ class measureTE:
 
                         if loc2_rite >= locG_l and loc2_left <= locG_r: # Any 1 bp overlap...
                             result.append(self_genome_linearData[index])
+
+                    if velocity:
+                        for index in loc_ids:
+                            locG_l = loc_lookups[index][0]
+                            locG_r = loc_lookups[index][1]
+                            # check strands
+
+                            if loc1_rite >= locG_l and loc1_left <= locG_r:
+                                result.append(self_genome_linearData[index])
+
+                            if loc2_rite >= locG_l and loc2_left <= locG_r:  # Any 1 bp overlap...
+                                result.append(self_genome_linearData[index])
 
                     if result:
                         # We are going to add to something:
