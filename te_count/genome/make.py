@@ -82,7 +82,7 @@ def make_genes_tes(genome, log):
         added += 1
 
         p.update(idx)
-        if idx > 1000: break
+        #if idx > 1000: break
 
     print(f'\nAdded {added:,} features')
 
