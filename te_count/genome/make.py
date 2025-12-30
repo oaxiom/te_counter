@@ -90,7 +90,7 @@ def make_genes_tes(genome, log):
     added = 0
     p = miniglbase.progressbar(len(gencode))
     for idx, item in enumerate(gencode):
-        if item['feature'] = 'transcript': # add to the velocyto for splicing estimates;
+        if item['feature'] == 'transcript': # add to the velocyto for splicing estimates;
             newentry = {'loc': item['loc'],
                         'strand': item['strand'],
                         'name': gene_name,
@@ -136,9 +136,10 @@ def make_genes_tes(genome, log):
     gl.load_list(newl)
     gl.save('{0}/{1}'.format(script_path, final_name))
 
+    print('\nAdded {:,} unspliced transcripts'.format(len(velocyto_transcripts)))
     gl = miniglbase.genelist()
     gl.load_list(velocyto_transcripts)
-    gl.save('{0}/{1}'.format(script_path, final_name_velocyto)))
+    gl.save('{0}/{1}'.format(script_path, final_name_velocyto))
 
     return True
 
