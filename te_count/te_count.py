@@ -693,9 +693,6 @@ class measureTE:
                     if loc2_rite >= locG_l and loc2_left <= locG_r: # Any 1 bp overlap...
                         result.append(self_genome_linearData[index])
 
-                if not result:
-                    continue
-
                 read_splice_status = None
 
                 if velocity:
@@ -740,7 +737,11 @@ class measureTE:
 
                     else: # Don't know, I give up;
                         read_splice_status = None
-                        print(f'Bad hit: {result}')
+                        if result:
+                            print(f'Bad hit: {result}')
+
+                if not result or result_velocity:
+                    continue
 
                 # We are going to add to something:
                 if barcode not in self.barcodes:
