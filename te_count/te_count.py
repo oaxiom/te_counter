@@ -35,10 +35,15 @@ class measureTE:
         self.genome = miniglbase.glload(self.genelist_glb_filename)
         self.all_feature_names = sorted(list(set(self.genome['ensg'])))
 
-    def bind_genome(self, genelist_glb_filename):
+    def bind_genome(self, genelist_glb_filename: str) -> None:
         # For delayed loading
         assert os.path.isfile(genelist_glb_filename), f'{genelist_glb_filename} not found'
         self.genelist_glb_filename = genelist_glb_filename
+
+    def bind_velocity_genome(self, filename: str) -> None:
+        # For delayed loading
+        assert os.path.isfile(filename), f'{filename} not found'
+        self.genelist_velocity_glb_filename = filename
 
     def parse_bampe(self, filename, strand=False, log=None):
         '''

@@ -25,6 +25,8 @@ def prepare_parser():
     optional = parser._action_groups.pop()
     optional.add_argument('--se', action='store_true', required=False, help='Set mode to SE (single-end) mode, default is paired-end mode')
     optional.add_argument('--sc', action='store_true', required=False, help='Set te_count to single-cell mode, default is bulk. Expects an CR:Z flag in the BAM/SAM file. Make sure you set --se appropriately')
+    optional.add_argument('--velocity', action='store_true', required=False, help='Generate velocity spliced and unspliced matrices')
+
     optional.add_argument('--noumi', action='store_true', required=False, help='If --sc is set, but this single cell data has no UMI in a UR:Z tag, set this switch')
     optional.add_argument('--strand', action='store_true', required=False, help='Use the strand information for the reads (protocol is strand-specific), default=False')
     optional.add_argument('-q', '--qual', nargs=1, type=int, default=20, required=False, help='q threshold for qulait filtering, default=20')
@@ -73,6 +75,7 @@ def main():
         log.info('  maxcells: {0} (default is 10000)'.format(args.maxcells))
         log.info('  No UMI: {0} (default is False)'.format(args.noumi))
         log.info('  Whitelist: {0} (no default)'.format(args.w))
+        log.info('  Generate Velocity: {0} (defaulf is False)'.format(args.velocity))
 
     mte = te_count.measureTE(sys.argv[0], args.qual)
 
@@ -93,6 +96,12 @@ def main():
         log.info('Found Genome {}/{}'.format(genome, args.mode[0]))
         mte.bind_genome(os.path.join(script_path, '../te_count/genome/{}_{}.glb'.format(genome, args.mode[0])))
         log.info('Found {} genome {}'.format(args.genome[0], args.mode[0]))
+        if args.velocity:
+            if not te_count.genome.check_genome_available(genome, args.mode[0], velocity=True):
+                log.error('{}/{} velocity genome not found, please run te_genome'.format(genome, args.mode[0]))
+                te_count.common.print_genomes(log=log)
+                sys.exit()
+            mte.bind_velocity_genome(os.path.join(script_path, '../te_count/genome/{}_{}_velocyto.glb'.format(genome, args.mode[0])))
 
     # Split paths:
     if args.sc:

@@ -1343,7 +1343,7 @@ class genelist(_base_genelist):
         config.log.info("Removed %s duplicates, %s remain" % ((len(self) - len(ov)), len(ov)))
         return(ov)
 
-    def removeDuplicates(self, key=None, **kargs):
+    def removeDuplicates(self, key=None):
         """
         **Purpose**
             remove the duplicates in the list and returns a new list;
@@ -1385,7 +1385,6 @@ class genelist(_base_genelist):
         newl = self.shallowcopy()
         newl.linearData = []
         count = 0
-        p = progressbar(len(self))
 
         for item in self.qkeyfind[key]:
             newl.linearData.append(self.linearData[min(self.qkeyfind[key][item])]) # grab first
