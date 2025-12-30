@@ -107,14 +107,20 @@ def main():
     if args.sc:
         if args.se: # single-end 10x-style
             # Genome is loaded inside sc_parse_bamse()
-            result = mte.sc_parse_bamse(args.inbam[0],
+            result, spliced, unspliced = mte.sc_parse_bamse(
+                args.inbam[0],
                 UMIS=not args.noumi,
                 maxcells=args.maxcells,
                 whitelistfilename=args.w,
                 strand=args.strand,
                 log=log,
-                label=os.path.split(args.outtsv[0])[1].replace('.tsv', ''))
+                label=os.path.split(args.outtsv[0])[1].replace('.tsv', ''),
+                velocity=args.velocity)
+
             mte.sc_save_result(result, args.outtsv[0], maxcells=args.maxcells, log=log)
+            if velocity:
+                mte.sc_save_result(spliced, args.outtsv[0].replace('.tsv', '.spliced.tsv'), maxcells=args.maxcells, log=log)
+                mte.sc_save_result(unspliced, args.outtsv[0].replace('.tsv', '.unspliced.tsv'), maxcells=args.maxcells, log=log)
         else:
             raise AssertionError('PE path for --sc is not implemented')
     else:

@@ -29,11 +29,17 @@ class measureTE:
         self.quality_threshold = quality_threshold
         self.random_number = f'{random.randint(1000, 100000):06d}'
 
-    def load_genome(self):
+    def load_genome(self, velocity=False):
         assert self.genelist_glb_filename, 'You need to bind the genome first'
 
         self.genome = miniglbase.glload(self.genelist_glb_filename)
         self.all_feature_names = sorted(list(set(self.genome['ensg'])))
+
+        if not velocity:
+            return
+
+        assert self.genelist_velocity_glb_filename, 'You need to bind the velocity genome first'
+        self.velocity_genome = miniglbase.glload(self.genelist_velocity_glb_filename)
 
     def bind_genome(self, genelist_glb_filename: str) -> None:
         # For delayed loading
@@ -302,15 +308,16 @@ class measureTE:
         log.info('Saved {0}'.format(out_filename))
 
     def sc_parse_bamse(self,
-        filename:str,
-        UMIS:bool = True,
-        whitelistfilename:str = None,
-        strand:bool = False,
-        log=None,
-        label:str = None,
-        maxcells:int = None
-                       velocity: bool = False):
-        '''
+                       filename:str,
+                       UMIS:bool = True,
+                       whitelistfilename:str = None,
+                       strand:bool = False,
+                       log=None,
+                       label:str = None,
+                       maxcells:int = None,
+                       velocity:bool = False
+                       ):
+        """
         **Purpose**
             Load in a BAMSE file, for single cell data, and look for the CR/CB and UMI (UR/UB) tags.
 
@@ -329,7 +336,7 @@ class measureTE:
 
             velocity (Optional, default=False)
                 calculate spliced and unspliced matrices
-        '''
+        """
         assert filename, 'You must specify a filename'
         assert whitelistfilename, 'You must specify a whitelist of barcodes'
         assert label, 'You must specify a label'
@@ -357,6 +364,8 @@ class measureTE:
         __quality_trimmed = 0
         __read_qc_fail = 0
         __already_seen_umicb = 0
+        __unspliced_read = 0
+        __exon_but_unspliced_read = 0
         sam = pysam.AlignmentFile(filename, 'r')
         idx = 0
         loc_strand = None
@@ -446,11 +455,15 @@ class measureTE:
                 if strand:
                     loc_strand = '-' if read.is_reverse else '+'
 
+                spliced = False
+                if 'N' in read.cigarstring:
+                    spliced = True
+
                 # Check we haven't seen this UMI/CB before:
                 if not umi:
                     pass # Just skip;
 
-                elif umi in umis: # umi/CB was seen
+                elif umi in umis: # umi/CB was seen once
                     if strand:
                         s = f'{chrom}:{loc_strand}' # I do the proper unique chrom/strand below
                     else:
@@ -463,7 +476,7 @@ class measureTE:
                         continue # We've seen this umi and loc before
 
                     # Update the key, so that I can do the proper unique chrom/strand below for all CB/UMIs
-                    s = f'{s}:{left}:{rite}'
+                    s = f'{s}:{left}:{rite}:{int(spliced)}'
 
                     umis[umi].add(s)
                     if barcode not in self.barcodes:
@@ -472,9 +485,9 @@ class measureTE:
 
                 else:
                     if strand:
-                        s = f'{chrom}:{loc_strand}:{left}:{rite}' # I do the proper unique chrom/strand below
+                        s = f'{chrom}:{loc_strand}:{left}:{rite}:{int(spliced)}' # I do the proper unique chrom/strand below
                     else:
-                        s = f'{chrom}:NA:{left}:{rite}'
+                        s = f'{chrom}:NA:{left}:{rite}:{int(spliced)}'
 
                     umis[umi].add(s) # defaultdict set([])
                     if barcode not in self.barcodes:
@@ -592,19 +605,25 @@ class measureTE:
         log.info('Part 3: Mapping the remaining UMIs to features')
 
         # Finally get the index;
-        self.load_genome()
+        self.load_genome(velocity=velocity)
 
         final_results = {i: {} for i in self.all_feature_names} # pseudo-sparse array
-        if velocity:
-            final_results_spliced = {i: {} for i in self.all_feature_names}
-            final_results_unspliced = {i: {} for i in self.all_feature_names}
+        final_results_spliced = {i: {} for i in self.all_feature_names}
+        final_results_unspliced = {i: {} for i in self.all_feature_names}
 
         # preprocess loc lookups
         self_genome_buckets = self.genome.buckets
         self_genome_linearData = self.genome.linearData
+        self_velocity_genome_buckets = self.velocity_genome.buckets
+        self_velocity_genome_linearData = self.velocity_genome.linearData
+
         loc_lookups = []
         for feature in self_genome_linearData:
             loc_lookups.append((feature['loc']['left'], feature['loc']['right']))
+        if velocity:
+            loc_velocity_lookups = []
+            for feature in self_velocity_genome_linearData:
+                loc_velocity_lookups.append((feature['loc']['left'], feature['loc']['right']))
 
         umis = gzip.open(f'tmp.{self.random_number}.merged.{label}.bun', 'rt')
 
@@ -616,18 +635,19 @@ class measureTE:
 
             barcode = id_to_whitelist[umi[0]]
 
-            # I need to clean up the UMIs, as they are currently unique for chrom, [strand], left, rite
+            # I first need to clean up the UMIs, as they are currently unique for chrom, [strand], left, rite, spliced
             # But they should be unique for chrom, [strand] only
             reads = {}
             for r in umi[2:]:
                 r = r.split(':')
-                reads[(r[0], r[1])] = (int(r[2]), int(r[3])) # <chrom>, <strand> = <left>, <rite>
+                reads[(r[0], r[1])] = (int(r[2]), int(r[3]), int(r[4])) # <chrom>, <strand> = <left>, <rite>, spliced;
 
             for r, c in reads.items():
                 chrom = r[0]
                 if strand: loc_strand = r[1]
-                left = c[0]
-                rite = c[1]
+                left, rite, spliced = c
+
+                print(c)
 
                 if chrom not in self_genome_buckets:
                     continue
@@ -638,83 +658,147 @@ class measureTE:
                 right_buck = (rite//bucket_size) * bucket_size
                 buckets_reqd = range(left_buck, right_buck+bucket_size, bucket_size)
                 result = []
+                result_velocity = []
                 # get the ids reqd.
                 loc_ids = set()
-                if buckets_reqd:
-                    loc1_left = left
-                    loc1_rite = left+1
-                    loc2_left = rite-1
-                    loc2_rite = rite # I just align the two edges, then I don't need to worry about split-reads, and I rely on the duplicate removal
+                loc_ids_velocity = set()
+                if not buckets_reqd:
+                    continue
 
-                    # To get rid of the same gene twice
-                    for buck in buckets_reqd:
-                        if buck in self_genome_buckets[chrom]:
-                            loc_ids.update(self_genome_buckets[chrom][buck]) # set = unique ids
+                loc1_left = left
+                loc1_rite = left+1
+                loc2_left = rite-1
+                loc2_rite = rite # I just align the two edges, then I don't need to worry about split-reads, and I rely on the duplicate removal
 
-                    for index in loc_ids:
-                        locG_l = loc_lookups[index][0]
-                        locG_r = loc_lookups[index][1]
-                        # check strands
+                # To get rid of the same gene twice
+                for buck in buckets_reqd:
+                    if buck in self_genome_buckets[chrom]:
+                        loc_ids.update(self_genome_buckets[chrom][buck]) # set = unique ids
+                    if velocity and buck in self_velocity_genome_buckets[chrom]:
+                        loc_ids_velocity.update(self_velocity_genome_buckets[chrom][buck]) # set = unique ids
 
-                        #print loc.qcollide(self.linearData[index]["loc"]), loc, self.linearData[index]["loc"]
-                        #if loc1.qcollide(self.genome.linearData[index]["loc"]): # Any 1 bp overlap...
-                        #    result.append(self.genome.linearData[index])
+                for index in loc_ids:
+                    locG_l = loc_lookups[index][0]
+                    locG_r = loc_lookups[index][1]
+                    # check strands
 
+                    #print loc.qcollide(self.linearData[index]["loc"]), loc, self.linearData[index]["loc"]
+                    #if loc1.qcollide(self.genome.linearData[index]["loc"]): # Any 1 bp overlap...
+                    #    result.append(self.genome.linearData[index])
+
+                    if loc1_rite >= locG_l and loc1_left <= locG_r:
+                        result.append(self_genome_linearData[index])
+
+                    if loc2_rite >= locG_l and loc2_left <= locG_r: # Any 1 bp overlap...
+                        result.append(self_genome_linearData[index])
+
+                read_splice_status = None
+
+                if velocity:
+                    for index in loc_ids_velocity:
+                        locG_l = loc_velocity_lookups[index][0]
+                        locG_r = loc_velocity_lookups[index][1]
                         if loc1_rite >= locG_l and loc1_left <= locG_r:
-                            result.append(self_genome_linearData[index])
+                            result_velocity.append(self_velocity_genome_linearData[index])
+                        if loc2_rite >= locG_l and loc2_left <= locG_r:  # Any 1 bp overlap...
+                            result_velocity.append(self_velocity_genome_linearData[index])
 
-                        if loc2_rite >= locG_l and loc2_left <= locG_r: # Any 1 bp overlap...
-                            result.append(self_genome_linearData[index])
+                    # need to work out the splice status here;
+                    if spliced: # simplest case, it's a split read;
+                        read_splice_status = 'spliced'
 
-                    if velocity:
-                        for index in loc_ids:
-                            locG_l = loc_lookups[index][0]
-                            locG_r = loc_lookups[index][1]
-                            # check strands
-
-                            if loc1_rite >= locG_l and loc1_left <= locG_r:
-                                result.append(self_genome_linearData[index])
-
-                            if loc2_rite >= locG_l and loc2_left <= locG_r:  # Any 1 bp overlap...
-                                result.append(self_genome_linearData[index])
-
-                    if result:
-                        # We are going to add to something:
-                        if barcode not in self.barcodes:
-                            self.barcodes[barcode] = 0
-                        self.barcodes[barcode] += 1
-                        # do the annotation so that a read only gets counted to a TE if it does not hit a gene:
-                        # This will currently allow 1 read to be counted twice if each edge is inside a different feature.
-                        # Is that wrong, or a reasonable compromise?
-
+                    elif result:
                         types = set([i['type'] for i in result])
-                        ensgs = set([(i['ensg'], i['strand']) for i in result]) # only count 1 read to 1 gene
                         if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
-                            for e in ensgs:
-                                # e[1] = strand Only collect gene results on the correct strand
-                                if strand and loc_strand != e[1]: # Don't count if antisense to an exon.
-                                    continue
+                            # We hit an exon;
+                            # Now we need to know if the read spills over the edge of an exon;
+                            for hit in result:
+                                # I know it's a hit;
+                                # If any one read is contained, it's 'spliced'
+                                if hit['loc'].left <= left and right <= hit['loc'].right:
+                                    # entirely contained, spliced
+                                    read_splice_status = 'spliced'
+                            else:
+                                # Couldn't find a completely enclosing exon;
+                                read_splice_status = 'unspliced'
+                                __exon_but_unspliced_read += 1
 
-                                if barcode not in final_results[e[0]]:
-                                    final_results[e[0]][barcode] = 0
-                                final_results[e[0]][barcode] += 1
+                    elif result_velocity:
+                        # We hit a transcript, but not an exon;
+                        # The velocity genome only contains transcripts, so must be an intron:
+                        read_splice_status = 'unspliced'
+                        __unspliced_read += 1
 
-                        elif 'TE' in types:
-                            for e in ensgs: # Not in any other RNA, so okay to count as a TE
-                                if barcode not in final_results[e[0]]:
-                                    final_results[e[0]][barcode] = 0
-                                final_results[e[0]][barcode] += 1
+                    else: # Don't know, I give up;
+                        read_splice_status = None
+                        print(f'Bad hit: {result}')
 
-                        elif 'enhancer' in types:
-                            for e in ensgs: # Not in any other RNA, so okay to count as a enhancer
-                                if barcode not in final_results[e[0]]:
-                                    final_results[e[0]][barcode] = 0
-                                final_results[e[0]][barcode] += 1
-                        else:
-                            continue  # Don't count the read to __read_assinged_to_feature
+                if result:
+                    # We are going to add to something:
+                    if barcode not in self.barcodes:
+                        self.barcodes[barcode] = 0
+                    self.barcodes[barcode] += 1
+                    # do the annotation so that a read only gets counted to a TE if it does not hit a gene:
+                    # This will currently allow 1 read to be counted twice if each edge is inside a different feature.
+                    # Is that wrong, or a reasonable compromise?
 
-                        __read_assinged_to_feature += 1
-                        #print()
+                    result_hits = None
+                    types = set([i['type'] for i in result])
+                    ensgs = set([(i['ensg'], i['strand']) for i in result]) # only count 1 read to 1 gene
+                    if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
+                        for e in ensgs:
+                            # e[1] = strand Only collect gene results on the correct strand
+                            if strand and loc_strand != e[1]: # Don't count if antisense to an exon.
+                                continue
+
+                            if barcode not in final_results[e[0]]:
+                                final_results[e[0]][barcode] = 0
+                            final_results[e[0]][barcode] += 1
+                        result_hits = [e[0] for e in ensgs if e[1] == loc_strand]
+
+                    elif 'TE' in types:
+                        for e in ensgs: # Not in any other RNA, so okay to count as a TE
+                            if barcode not in final_results[e[0]]:
+                                final_results[e[0]][barcode] = 0
+                            final_results[e[0]][barcode] += 1
+                        result_hits = [e[0] for e in ensgs if e[1] == loc_strand]
+
+                    elif 'enhancer' in types:
+                        for e in ensgs: # Not in any other RNA, so okay to count as a enhancer
+                            if barcode not in final_results[e[0]]:
+                                final_results[e[0]][barcode] = 0
+                            final_results[e[0]][barcode] += 1
+                    else:
+                        continue  # Don't count the read to __read_assinged_to_feature
+
+                    __read_assinged_to_feature += 1
+                    #print()
+                elif result_velocity:
+                    # We don't store the use of the barcode here for statistics;
+                    # intronic read, so unspliced;
+                    __unspliced_read += 1
+                    # hit a transcript, if result == None then
+                    read_splice_status = 'unspliced'
+
+                    result_hits = None
+                    types = set([i['type'] for i in result])
+                    ensgs = set([(i['ensg'], i['strand']) for i in result]) # only count 1 read to 1 gene
+                    if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
+                        result_hits = [e[0] for e in ensgs if e[1] == loc_strand]
+
+                # Final spliced unspliced matrices;
+                if velocity and read_splice_status == 'spliced': # write out values;
+                    # spliced read;
+                    for hit in result_hits:
+                        if barcode not in final_results[e[0]]:
+                            final_results_spliced[e[0]][barcode] = 0
+                        final_results_spliced[e[0]][barcode] += 1
+
+                elif velocity and read_splice_status == 'unspliced': # unspliced read;
+                    for hit in result_hits:
+                        if barcode not in final_results[e[0]]:
+                            final_results_unspliced[e[0]][barcode] = 0
+                        final_results_unspliced[e[0]][barcode] += 1
 
         umis.close()
         sam.close()
@@ -732,9 +816,13 @@ class measureTE:
         log.info('  {:,} total valid reads'.format(__total_valid_reads))
         log.info('  Assigned {:,} ({:.1f}%) of total valid reads to features'.format(__read_assinged_to_feature, ((__read_assinged_to_feature/__total_valid_reads) * 100.0))) # add per cents here;
 
+        if velocity:
+            log.info('  Velocity exon, but unspliced reads {__exon_but_unspliced_read:,}')
+            log.info('  Velocity unspliced reads {__unspliced_read:,}')
+
         self.total_reads = idx
 
-        return final_results
+        return final_results, final_results_spliced, final_results_unspliced
 
     def sc_save_result(self, result, out_filename, maxcells=None, log=None):
         '''
