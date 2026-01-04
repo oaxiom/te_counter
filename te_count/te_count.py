@@ -750,7 +750,7 @@ class measureTE:
                         if result:
                             print(f'Bad hit2: {result}')
 
-                if not result or result_velocity:
+                if not (result or result_velocity):
                     continue
 
                 # We are going to add to something:
