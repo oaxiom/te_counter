@@ -698,16 +698,16 @@ class measureTE:
                     if loc2_rite >= locG_l and loc2_left <= locG_r: # Any 1 bp overlap...
                         result.append(self_genome_linearData[index])
 
-                ####### Work out the splice status
-                for index in loc_ids_velocity:
-                    locG_l = loc_velocity_lookups[index][0]
-                    locG_r = loc_velocity_lookups[index][1]
-                    if loc1_rite >= locG_l and loc1_left <= locG_r:
-                        result_velocity.append(self_velocity_genome_linearData[index])
-                    if loc2_rite >= locG_l and loc2_left <= locG_r:  # Any 1 bp overlap...
-                        result_velocity.append(self_velocity_genome_linearData[index])
-
                 if velocity:
+                    ####### Work out the splice status
+                    for index in loc_ids_velocity:
+                        locG_l = loc_velocity_lookups[index][0]
+                        locG_r = loc_velocity_lookups[index][1]
+                        if loc1_rite >= locG_l and loc1_left <= locG_r:
+                            result_velocity.append(self_velocity_genome_linearData[index])
+                        if loc2_rite >= locG_l and loc2_left <= locG_r:  # Any 1 bp overlap...
+                            result_velocity.append(self_velocity_genome_linearData[index])
+
                     read_splice_status = self._velocity_logic(left, rite, result, result_velocity, spliced, multi_mapped)
                     # record stats;
                     if read_splice_status == 'spliced':
@@ -719,7 +719,7 @@ class measureTE:
                         __unspliced_read += 1
                     elif read_splice_status == 'unknown':
                         # emit an error:
-                        print('Bad velo determination:', read, result)
+                        print('Bad velo determination:', read, c, result)
                     elif read_splice_status == 'ignored':
                         __ignored_read += 1
 
@@ -861,11 +861,9 @@ class measureTE:
             return 'unspliced'
 
         else:  # Don't know, I give up;
-            return 'unknown'
+            return 'ignored'
 
-        if not read_splice_status:
-            return 'unknown'
-        return read_splice_status
+        return 'unknown'
 
     def sc_save_result(self, result, out_filename, maxcells=None, log=None):
         '''
