@@ -367,6 +367,7 @@ class measureTE:
         __already_seen_umicb = 0
         __spliced_read = 0
         __unspliced_read = 0
+        __ignored_read = 0
         __exon_but_unspliced_read = 0
         sam = pysam.AlignmentFile(filename, 'r')
         idx = 0
@@ -461,6 +462,10 @@ class measureTE:
                 if 'N' in read.cigarstring:
                     spliced = True
 
+                multi_mapped = False
+                if 'NH' in tags and tags['NH'] != 1:
+                    multi_mapped = True
+
                 # Check we haven't seen this UMI/CB before:
                 if not umi:
                     pass # Just skip;
@@ -478,7 +483,7 @@ class measureTE:
                         continue # We've seen this umi and loc before
 
                     # Update the key, so that I can do the proper unique chrom/strand below for all CB/UMIs
-                    s = f'{s}:{left}:{rite}:{int(spliced)}'
+                    s = f'{s}:{left}:{rite}:{int(spliced)}:{int(multi_mapped)}'
 
                     umis[umi].add(s)
                     if barcode not in self.barcodes:
@@ -487,9 +492,9 @@ class measureTE:
 
                 else:
                     if strand:
-                        s = f'{chrom}:{loc_strand}:{left}:{rite}:{int(spliced)}' # I do the proper unique chrom/strand below
+                        s = f'{chrom}:{loc_strand}:{left}:{rite}:{int(spliced)}:{int(multi_mapped)}' # I do the proper unique chrom/strand below
                     else:
-                        s = f'{chrom}:NA:{left}:{rite}:{int(spliced)}'
+                        s = f'{chrom}:NA:{left}:{rite}:{int(spliced)}:{int(multi_mapped)}'
 
                     umis[umi].add(s) # defaultdict set([])
                     if barcode not in self.barcodes:
@@ -643,12 +648,12 @@ class measureTE:
             reads = {}
             for r in umi[2:]:
                 r = r.split(':')
-                reads[(r[0], r[1])] = (int(r[2]), int(r[3]), int(r[4])) # <chrom>, <strand> = <left>, <rite>, spliced;
+                reads[(r[0], r[1])] = (int(r[2]), int(r[3]), int(r[4]), int(r[5])) # <chrom>, <strand> = <left>, <rite>, spliced;
 
-            for r, c in reads.items():
-                chrom = r[0]
-                if strand: loc_strand = r[1]
-                left, rite, spliced = c
+            for read, c in reads.items():
+                chrom = read[0]
+                if strand: loc_strand = read[1]
+                left, rite, spliced, multi_mapped = c
 
                 if chrom not in self_genome_buckets:
                     continue
@@ -694,61 +699,29 @@ class measureTE:
                         result.append(self_genome_linearData[index])
 
                 ####### Work out the splice status
-                read_splice_status = None
+                for index in loc_ids_velocity:
+                    locG_l = loc_velocity_lookups[index][0]
+                    locG_r = loc_velocity_lookups[index][1]
+                    if loc1_rite >= locG_l and loc1_left <= locG_r:
+                        result_velocity.append(self_velocity_genome_linearData[index])
+                    if loc2_rite >= locG_l and loc2_left <= locG_r:  # Any 1 bp overlap...
+                        result_velocity.append(self_velocity_genome_linearData[index])
 
                 if velocity:
-                    for index in loc_ids_velocity:
-                        locG_l = loc_velocity_lookups[index][0]
-                        locG_r = loc_velocity_lookups[index][1]
-                        if loc1_rite >= locG_l and loc1_left <= locG_r:
-                            result_velocity.append(self_velocity_genome_linearData[index])
-                        if loc2_rite >= locG_l and loc2_left <= locG_r:  # Any 1 bp overlap...
-                            result_velocity.append(self_velocity_genome_linearData[index])
-
-                    # need to work out the splice status here;
-                    if spliced: # simplest case, it's a split read;
-                        read_splice_status = 'spliced'
+                    read_splice_status = self._velocity_logic(left, rite, result, result_velocity, spliced, multi_mapped)
+                    # record stats;
+                    if read_splice_status == 'spliced':
                         __spliced_read += 1
-
-                    elif result:
-                        types = set([i['type'] for i in result])
-                        if 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
-                            # We hit an exon;
-                            # Now we need to know if the read spills over the edge of an exon;
-                            for hit in result:
-                                # I know it's a hit;
-                                # If any one read is contained, it's 'spliced'
-                                if hit['loc'].left <= left and rite <= hit['loc'].right:
-                                    # entirely contained, spliced
-                                    read_splice_status = 'spliced'
-                                    __spliced_read += 1
-                                    break
-                            else:
-                                # Couldn't find a completely enclosing exon;
-                                read_splice_status = 'unspliced'
-                                __exon_but_unspliced_read += 1
-                                __unspliced_read += 1
-                        else:
-                            # Couldn't find a completely enclosing exon;
-                            read_splice_status = 'unspliced'
-                            __exon_but_unspliced_read += 1
-                            __unspliced_read += 1
-
-                    elif result_velocity:
-                        # We hit a transcript, but not an exon;
-                        # The velocity genome only contains transcripts, so must be an intron:
-                        # only protein_coding, lincRNA and lncRNA used in velocty genome;
-                        read_splice_status = 'unspliced'
+                    elif read_splice_status == 'unspliced':
                         __unspliced_read += 1
-
-                    else: # Don't know, I give up;
-                        read_splice_status = None
-                        if result:
-                            print(f'Bad hit1: {result}')
-
-                    if not read_splice_status:
-                        if result:
-                            print(f'Bad hit2: {result}')
+                    elif read_splice_status == 'ex-unspliced':
+                        __exon_but_unspliced_read += 1
+                        __unspliced_read += 1
+                    elif read_splice_status == 'unknown':
+                        # emit an error:
+                        print('Bad velo determination:', read, result)
+                    elif read_splice_status == 'ignored':
+                        __ignored_read += 1
 
                 if not (result or result_velocity):
                     continue
@@ -833,15 +806,66 @@ class measureTE:
         if velocity:
             total_reads_for_velocity = __spliced_read + __unspliced_read
             preads = (__exon_but_unspliced_read/total_reads_for_velocity) * 100.0
+            log.info( '  ------------------------')
             log.info(f'  Velocity exon, but unspliced reads {__exon_but_unspliced_read:,} ({preads:.1f}%)')
             ureads = (__spliced_read / total_reads_for_velocity) *100.0
             log.info(f'  Velocity spliced reads {__spliced_read:,} ({ureads:.1f}%)')
-            ureads = (__unspliced_read / total_reads_for_velocity) *100.0
-            log.info(f'  Velocity unspliced reads {__unspliced_read:,} ({ureads:.1f}%)')
+            log.info('  Velocity unspliced reads {:,} ({:.1f}%)'.format(__unspliced_read, (__unspliced_read / total_reads_for_velocity) *100.0))
+            log.info('  Velocity ignored reads {:,} ({:.1f}%)'.format(__ignored_read, (__ignored_read / total_reads_for_velocity) * 100.0))
 
         self.total_reads = idx
 
         return final_results, final_results_spliced, final_results_unspliced
+
+    def _velocity_logic(self, left, rite, result, result_velocity, spliced, multi_mapped) -> str:
+        """
+        Can return five possible states:
+        spliced
+        unspliced
+        ex-unspliced
+        unknown
+        ignored
+        """
+        # need to work out the splice status here;
+        if spliced:  # simplest case, it's a split read;
+            return 'spliced'
+
+        elif multi_mapped: # velocyto ignores all multimaps
+            return 'ignored'
+
+        elif result:
+            types = set([i['type'] for i in result])
+            if 'TE' in types: # Any TE-dervied read is ignored in velocity measures;
+                return 'ignored'
+
+            elif 'protein_coding' in types or 'lincRNA' in types or 'lncRNA' in types:
+                # We hit an exon;
+                # Now we need to know if the read spills over the edge of an exon;
+                for hit in result:
+                    # I know it's a hit;
+                    # If any one read is fully contained in an exon, it's 'spliced'
+                    if hit['loc'].left <= left and rite <= hit['loc'].right:
+                        # entirely contained, spliced
+                        return 'spliced'
+                else:
+                    # Couldn't find a completely enclosing exon;
+                    return 'ex-unspliced'
+            else:
+                # Couldn't find a completely enclosing exon;
+                return 'ex-unspliced'
+
+        elif result_velocity:
+            # We hit a transcript, but not an exon;
+            # The velocity genome only contains transcripts, so must be an intron:
+            # only protein_coding, lincRNA and lncRNA used in velocty genome;
+            return 'unspliced'
+
+        else:  # Don't know, I give up;
+            return 'unknown'
+
+        if not read_splice_status:
+            return 'unknown'
+        return read_splice_status
 
     def sc_save_result(self, result, out_filename, maxcells=None, log=None):
         '''
