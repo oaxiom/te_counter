@@ -766,26 +766,26 @@ class measureTE:
 
                 __read_assinged_to_feature += 1
 
-            # Final spliced unspliced matrices;
-            if not velocity:
-                continue
+                # Final spliced unspliced matrices;
+                if not velocity:
+                    continue
 
-            if read_splice_status == 'spliced': # write out values;
-                # spliced read;
-                for e in set([(i['ensg'], i['strand']) for i in result]):
-                    if barcode not in final_results_spliced[e[0]]:
-                        final_results_spliced[e[0]][barcode] = 0
-                    final_results_spliced[e[0]][barcode] += 1
+                if read_splice_status == 'spliced' or read_splice_status == 'ex-unspliced': # write out values;
+                    # spliced read;
+                    for e in set([(i['ensg'], i['strand']) for i in result]):
+                        if barcode not in final_results_spliced[e[0]]:
+                            final_results_spliced[e[0]][barcode] = 0
+                        final_results_spliced[e[0]][barcode] += 1
 
-            elif read_splice_status == 'unspliced': # unspliced read;
-                for e in set([(i['ensg'], i['strand']) for i in result_velocity]):
-                    if e[0] not in self.all_feature_names_set:
-                        # Occasioanlly some mismatches in the biotype of the annotated genes.
-                        # Always default to the one in the main assembly;
-                        continue
-                    if barcode not in final_results_unspliced[e[0]]:
-                        final_results_unspliced[e[0]][barcode] = 0
-                    final_results_unspliced[e[0]][barcode] += 1
+                elif read_splice_status == 'unspliced': # unspliced read;
+                    for e in set([(i['ensg'], i['strand']) for i in result_velocity]):
+                        if e[0] not in self.all_feature_names_set:
+                            # Occasioanlly some mismatches in the biotype of the annotated genes.
+                            # Always default to the one in the main assembly;
+                            continue
+                        if barcode not in final_results_unspliced[e[0]]:
+                            final_results_unspliced[e[0]][barcode] = 0
+                        final_results_unspliced[e[0]][barcode] += 1
 
         umis.close()
         sam.close()
@@ -808,7 +808,7 @@ class measureTE:
             preads = (__exon_but_unspliced_read/total_reads_for_velocity) * 100.0
             log.info( '  ------------------------')
             log.info(f'  Velocity exon, but unspliced reads {__exon_but_unspliced_read:,} ({preads:.1f}%)')
-            ureads = (__spliced_read / total_reads_for_velocity) *100.0
+            ureads = (__spliced_read / total_reads_for_velocity) * 100.0
             log.info(f'  Velocity spliced reads {__spliced_read:,} ({ureads:.1f}%)')
             log.info('  Velocity unspliced reads {:,} ({:.1f}%)'.format(__unspliced_read, (__unspliced_read / total_reads_for_velocity) *100.0))
             log.info('  Velocity ignored reads {:,} ({:.1f}%)'.format(__ignored_read, (__ignored_read / total_reads_for_velocity) * 100.0))
