@@ -90,6 +90,8 @@ def main():
                 if idx % 1e6 == 0:
                     log.info('Processed {:,} reads'.format(idx))
 
+                if 'CB' in tags:
+                    barcode = tags['CB']
                 CR = read.get_tag('CR')
                 CB = None
                 UR = read.get_tag('UR') # We have to get, even if we don't need it;
@@ -115,14 +117,15 @@ def main():
 
                 else: # check for 1 bp mismatch
                     if CR in barcodes_searched_memo:
-                        CB = CR # Already seen, use the memoised one;
+                        CB = barcodes_searched_memo[CR] # Already seen, use the memoised one;
 
-                    for m in one_bp_mismatch(CR):
-                        if m in whitelist:
-                            CB = m
-                            _rescued_one_bp_mismatch += 1
-                            barcodes_searched_memo[CR] = CB
-                            break
+                    else:
+                        for m in one_bp_mismatch(CR):
+                            if m in whitelist:
+                                CB = m
+                                _rescued_one_bp_mismatch += 1
+                                barcodes_searched_memo[CR] = CB # memo it;
+                                break
 
                 if CB:
                     # Only correct UMI if we already fixed the CB
