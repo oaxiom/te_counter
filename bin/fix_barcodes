@@ -90,11 +90,12 @@ def main():
                 if idx % 1e6 == 0:
                     log.info('Processed {:,} reads'.format(idx))
 
-                if 'CB' in tags:
-                    barcode = tags['CB']
-                CR = read.get_tag('CR')
                 CB = None
-                UR = read.get_tag('UR') # We have to get, even if we don't need it;
+                tags = dict(read.get_tags())
+                if 'CR' in tags: CR = tags['CR']
+                if 'CB' in tags: CB = tags['CB']
+
+                UR = tags['UR'] # We have to get, even if we don't need it;
                 UB = None
 
                 # Simple rejections, e.g. two N
@@ -114,6 +115,10 @@ def main():
 
                 elif CR in whitelist:
                     CB = CR
+
+                elif CB:
+                    pass
+                    # We don't need to fix the barcodes;
 
                 else: # check for 1 bp mismatch
                     if CR in barcodes_searched_memo:
