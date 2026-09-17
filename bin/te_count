@@ -25,7 +25,7 @@ def prepare_parser():
     optional = parser._action_groups.pop()
     optional.add_argument('--se', action='store_true', required=False, help='Set mode to SE (single-end) mode, default is paired-end mode')
     optional.add_argument('--sc', action='store_true', required=False, help='Set te_count to single-cell mode, default is bulk. Expects an CR:Z flag in the BAM/SAM file. Make sure you set --se appropriately')
-    optional.add_argument('--velocity', action='store_true', required=False, help='Generate velocity spliced and unspliced matrices')
+    optional.add_argument('--velocity', action='store_true', required=False, help='EXPERIMENTAL! Generate velocity spliced and unspliced matrices')
 
     optional.add_argument('--noumi', action='store_true', required=False, help='If --sc is set, but this single cell data has no UMI in a UR:Z tag, set this switch')
     optional.add_argument('--strand', action='store_true', required=False, help='Use the strand information for the reads (protocol is strand-specific), default=False')
@@ -78,6 +78,9 @@ def main():
         log.info('  Generate Velocity: {0} (default is False)'.format(args.velocity))
 
     mte = te_count.measureTE(sys.argv[0], args.qual)
+
+    if args.velocity:
+        lof.warning('--velocity is experimental, and probably not working currently')
 
     if args.mode[0] == 'custom':
         if not os.path.exists(args.genome[0]): raise AssertionError('genome index not file found')

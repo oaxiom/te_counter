@@ -43,7 +43,7 @@ def prepare_parser():
     return parser
 
 
-def one_bp_mismatch(motif):
+def one_bp_mismatch(motif) -> list:
     return list(set(itertools.chain.from_iterable(
         [["".join([motif[:pos], nucleotide, motif[pos+1:]]) for nucleotide in {"A", "C", "G", "T"}] for pos in range(len(motif))])))
 
